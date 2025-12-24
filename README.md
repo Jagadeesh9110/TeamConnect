@@ -56,16 +56,16 @@ Unlike social chat applications, TeamConnect is built specifically for teams, pr
 ---
 
 ## 🧩 System Architecture (High-Level)
-Client (React + TypeScript)
-|
-|--- HTTPS (REST APIs)
-|--- WSS (WebSockets)
-|
-Backend (Node.js + Express)
-|
-|--- MongoDB (Users, Messages, Conversations)
-|--- Gemini API (AI Assistance)
-|--- Redis Pub/Sub (optional, for scaling)
+chat-app/
+│
+├── client/                     # React + TypeScript
+│   ├── HTTPS                  # REST APIs
+│   └── WSS                    # WebSockets
+│
+└── server/                     # Node.js + Express
+    ├── MongoDB                # Users, Messages, Conversations
+    ├── Gemini API             # AI Assistance
+    └── Redis Pub/Sub          # (optional, for scaling)
 
 
 ---
@@ -85,8 +85,10 @@ Backend (Node.js + Express)
 
 TeamConnect/
 │
-├── client/ # React frontend (TypeScript + TailwindCSS)
-├── server/ # Node.js backend (Express + WebSockets)
+├── client/                     # React frontend (TypeScript + TailwindCSS)
+│
+├── server/                     # Node.js backend (Express + WebSockets)
+│
 ├── README.md
 ├── .gitignore
 └── LICENSE
