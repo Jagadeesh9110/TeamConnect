@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 interface IConversation extends Document {
-    participants: string[];
+    participants: mongoose.Types.ObjectId[];
     type: "private" | "group";
     lastMessageAt?: Date;
 }
