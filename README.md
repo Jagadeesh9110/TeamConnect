@@ -13,7 +13,7 @@ In fast-paced project environments, **information overload** is a critical bottl
 *   **The "Catch-Up" Tax**: Team members returning after a few hours offline struggle to find relevant tasks without scrolling endlessly.
 *   **Tool Mismatch**: Social apps lack structure for work, while full enterprise tools are often too heavy or expensive for agile student/project groups.
 
-**TeamConnect** solves this by integrating **AI agents directly into the message loop**, acting as a real-time scribe that organizes chaos into clarity.
+**TeamConnect** solves this by integrating **AI summarization directly into the message loop**, acting as a real-time scribe that organizes chaos into clarity.
 
 ---
 
