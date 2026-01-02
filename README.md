@@ -1,9 +1,19 @@
 # TeamConnect
 
-TeamConnect is a real-time secure team messaging platform designed for productive team communication.  
-It supports instant messaging using WebSockets and enhances collaboration with AI-powered summarization and assistance.
+> **Real-time collaboration meets AI intelligence—turning messy group chats into structured, actionable workflows.**
 
-Unlike social chat applications, TeamConnect is built specifically for teams, projects, and academic or professional groups, where conversations need to stay organized and actionable.
+TeamConnect is a purpose-built communication platform designed for **engineering and academic teams** who need more than just "chat." It combines low-latency, WebSocket-based real-time messaging with an intelligent AI layer that parses conversations to extract context, summarize long threads, and highlight action items.
+
+Unlike social apps (WhatsApp) built for engagement or enterprise suites (Teams) that can become noisy firehoses, TeamConnect focuses on **signal-over-noise**. It provides a distraction-free environment where project history is preserved and transformed into retrieval-ready intelligence, ensuring users can catch up in seconds—not minutes.
+
+## ❓ The Problem
+
+In fast-paced project environments, **information overload** is a critical bottleneck:
+*   **Context Decay**: Key decisions made 200 messages ago get buried under "catch-up" chatter.
+*   **The "Catch-Up" Tax**: Team members returning after a few hours offline struggle to find relevant tasks without scrolling endlessly.
+*   **Tool Mismatch**: Social apps lack structure for work, while full enterprise tools are often too heavy or expensive for agile student/project groups.
+
+**TeamConnect** solves this by integrating **AI agents directly into the message loop**, acting as a real-time scribe that organizes chaos into clarity.
 
 ---
 
