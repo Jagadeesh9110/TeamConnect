@@ -6,6 +6,8 @@ interface SocketUser {
     email: string;
 }
 
+const onlineUsers = new Map<string, string>();
+
 export const setupSocket = (io: Server) => {
     // Authenticate socket connection
     io.use((socket: Socket, next) => {
@@ -35,11 +37,20 @@ export const setupSocket = (io: Server) => {
         }
         console.log("Socket connected:", user.userId);
 
+        onlineUsers.set(user.userId, socket.id);
+        console.log("Online users:", onlineUsers.size);
+
+
         // Join a conversation room
         socket.on("join_conversation", (conversationId: string) => {
             if (!conversationId) return;
 
             socket.join(conversationId);
+
+            // Notify others in the room
+            socket.to(conversationId).emit("user_online", {
+                userId: user.userId,
+            });
             console.log(
                 `User ${user.userId} joined room ${conversationId}`
             );
@@ -81,7 +92,19 @@ export const setupSocket = (io: Server) => {
 
 
         socket.on("disconnect", () => {
+            onlineUsers.delete(user.userId);
             console.log("Socket disconnected:", user.userId);
+
+            console.log("Online users:", onlineUsers.size);
+
+            // Notify all rooms this socket was part of
+            socket.rooms.forEach((roomId) => {
+                if (roomId !== socket.id) {
+                    socket.to(roomId).emit("user_offline", {
+                        userId: user.userId,
+                    });
+                }
+            });
         });
     })
 
