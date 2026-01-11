@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./app/routes/Login";
 import RegisterPage from "./app/routes/Register";
 import ProtectedRoute from "./app/routes/ProtectedRoute";
-import ChatPage from "./app/routes/Chat";
+// import ChatPage from "./app/routes/chat";
+import ChatLayout from "./app/chart/ChatLayout";
 
 
 function App() {
@@ -21,7 +22,9 @@ function App() {
           path="/app"
           element={
             <ProtectedRoute>
-              <ChatPage />
+              {/* <ChatPage /> */}
+              {/* <ChatPage /> */}
+              <ChatLayout />
             </ProtectedRoute>
           }
         />
