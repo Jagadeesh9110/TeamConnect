@@ -1,8 +1,17 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./app/routes/Login";
+import Register from "./app/routes/Register";
+
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-      <h1 className="text-3xl font-bold">TeamConnect Frontend</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
