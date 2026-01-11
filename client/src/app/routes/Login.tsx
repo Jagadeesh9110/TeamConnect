@@ -2,11 +2,41 @@ import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../layout/AuthLayout";
 import TeamConnectLogo from "../components/TeamConnectLogo";
+import { loginUser } from "../../lib/api";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
+
+    const navigate = useNavigate();
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        try {
+            const data = await loginUser(email, password);
+
+            // store token
+            localStorage.setItem("accessToken", data.token);
+
+            console.log("Login success:", data.user);
+
+            navigate("/app");
+
+        } catch (err: any) {
+            console.error("Login failed:", err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <AuthLayout>
@@ -15,9 +45,9 @@ export default function LoginPage() {
                 w-full max-w-[420px]
                 p-8 md:p-10
                 rounded-3xl
-                bg-white/5 
+                bg-white/10
                 backdrop-blur-xl 
-                border border-white/10
+                border border-white/20
                 shadow-[0_0_40px_rgba(0,0,0,0.3)]
                 animate-in fade-in zoom-in duration-500
             ">
@@ -31,8 +61,14 @@ export default function LoginPage() {
                     </h1>
                 </div>
 
+                {error && (
+                    <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm text-red-400 text-center">
+                        {error}
+                    </div>
+                )}
+
                 {/* Form Inputs */}
-                <div className="space-y-5">
+                 <form onSubmit={handleSubmit} className="space-y-5">
 
                     {/* Email Field */}
                     <div className="relative group">
@@ -44,6 +80,7 @@ export default function LoginPage() {
                             placeholder="Email address"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            required
                             className="
                                 w-full pl-11 pr-4 py-3.5
                                 bg-navy-900/50 
@@ -67,6 +104,7 @@ export default function LoginPage() {
                             placeholder="Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            required
                             className="
                                 w-full pl-11 pr-12 py-3.5
                                 bg-navy-900/50 
@@ -90,6 +128,8 @@ export default function LoginPage() {
 
                     {/* Sign In Button */}
                     <button
+                        type="submit"
+                        disabled={loading}
                         className="
                             w-full py-3.5 mt-2
                             bg-gradient-to-r from-blue-600 to-blue-700
@@ -100,12 +140,13 @@ export default function LoginPage() {
                             hover:shadow-[0_6px_25px_rgba(37,99,235,0.6)]
                             transition-all duration-300
                             transform active:scale-[0.98]
+                            disabled:opacity-60 disabled:cursor-not-allowed
                         "
                     >
-                        Sign In
+                         {loading ? "Signing in…" : "Sign In"}
                     </button>
 
-                </div>
+                </form>
 
                 {/* Footer Link */}
                 <div className="mt-8 text-center">
