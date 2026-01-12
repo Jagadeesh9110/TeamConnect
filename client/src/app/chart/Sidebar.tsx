@@ -1,4 +1,43 @@
-export default function Sidebar() {
+import { useEffect, useState } from "react";
+import { fetchConversations } from "../../lib/chatApi";
+
+interface Conversation {
+    _id: string;
+    participants: { _id: string; name: string; email: string }[];
+    type: "private" | "group";
+}
+
+interface SidebarProps {
+    activeConversation: Conversation | null;
+    onSelectConversation: (conversation: Conversation) => void;
+}
+
+
+export default function Sidebar({
+    activeConversation,
+    onSelectConversation,
+}: SidebarProps) {
+
+     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadConversations = async () => {
+            try {
+                const data = await fetchConversations();
+                setConversations(data);
+            } catch (err) {
+                setError("Failed to load conversations");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadConversations();
+    }, []);
+
+
     return (
         <aside className="w-72 border-r border-white/5 bg-navy-800/60 backdrop-blur-xl">
             <div className="p-6">
@@ -6,14 +45,38 @@ export default function Sidebar() {
                     Conversations
                 </h2>
 
-                {/* Placeholder items */}
-                <div className="space-y-2">
-                    <div className="rounded-lg px-3 py-2 bg-white/5 text-sm">
-                        Product Discussion
-                    </div>
-                    <div className="rounded-lg px-3 py-2 hover:bg-white/5 text-sm text-slate-300">
-                        Backend Architecture
-                    </div>
+                    {loading && (
+                    <p className="text-sm text-slate-500">Loading conversations…</p>
+                )}
+
+                {error && (
+                    <p className="text-sm text-red-400">{error}</p>
+                )}
+                <div className="space-y-1">
+                    {conversations.map((conv) => {
+                        const isActive = conv._id === activeConversation?._id;
+
+                        return (
+                            <button
+                                key={conv._id}
+                                onClick={() => onSelectConversation(conv)}
+                                className={`
+                  w-full text-left px-3 py-2 rounded-md text-sm
+                  transition-colors
+                  ${isActive
+                                        ? "border-l-2 border-cyan-400 bg-white/5"
+                                        : "hover:bg-white/5 text-slate-300"
+                                    }
+                `}
+                            >
+                                <div className="truncate">
+                                    {conv.type === "group"
+                                        ? "Group Conversation"
+                                        : "Private Conversation"}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </aside>
