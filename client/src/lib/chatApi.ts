@@ -52,7 +52,7 @@ export const sendMessage = async (conversationId: string, message: string) => {
     const res = await fetch(`${API_BASE}/messages/${conversationId}`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ content:message }),
     });
 
     if (!res.ok) {
