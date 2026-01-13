@@ -48,11 +48,11 @@ export const fetchMessages = async (conversationId: string) => {
 
 // send message
 
-export const sendMessage = async (conversationId: string, message: string) => {
-    const res = await fetch(`${API_BASE}/messages/${conversationId}`, {
+export const sendMessage = async (conversationId: string, content: string) => {
+    const res = await fetch(`${API_BASE}/messages`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ content:message }),
+        body: JSON.stringify({ conversationId, content }),
     });
 
     if (!res.ok) {
@@ -60,4 +60,4 @@ export const sendMessage = async (conversationId: string, message: string) => {
     }
 
     return res.json();
-}
+};
