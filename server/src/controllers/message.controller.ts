@@ -54,8 +54,6 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
 
         return res.status(201).json(message);
 
-
-
     } catch (error) {
         console.error("Send message error", error);
         res.status(500).json({ error: "Failed to send message" });

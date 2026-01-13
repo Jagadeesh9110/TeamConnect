@@ -1,5 +1,8 @@
 import { Server, Socket } from "socket.io";
 import jwt from 'jsonwebtoken';
+import Message from "../models/Message";
+import Conversation from "../models/Conversation";
+import mongoose from "mongoose";
 
 interface SocketUser {
     userId: string;
@@ -45,8 +48,8 @@ export const setupSocket = (io: Server) => {
             if (!conversationId) return;
 
             socket.join(conversationId);
-            
-             // Notify others in the room
+
+            // Notify others in the room
             socket.to(conversationId).emit("user_online", {
                 userId: user.userId,
             });
@@ -58,16 +61,32 @@ export const setupSocket = (io: Server) => {
         });
 
         // Real-time message broadcasting
-        socket.on("send_message", (data) => {
-            const { conversationId, message } = data;
+        socket.on("send_message", async (data) => {
+            try {
+                const { conversationId, content } = data;
+                const userId = user.userId;
 
-            if (!conversationId || !message) return;
+                if (!conversationId || !content) return;
 
-            // Broadcast to all users in the conversation room
-            socket.to(conversationId).emit("receive_message", {
-                conversationId,
-                message,
-            });
+                const message = await Message.create({
+                    conversationId: new mongoose.Types.ObjectId(conversationId),
+                    senderId: new mongoose.Types.ObjectId(userId),
+                    content,
+                    status: "sent",
+                });
+
+                await Conversation.findByIdAndUpdate(conversationId, {
+                    lastMessageAt: new Date(),
+                });
+
+                io.to(conversationId).emit("receive_message", {
+                    conversationId,
+                    message,
+                });
+
+            } catch (err) {
+                console.error("Socket send_message error", err);
+            }
         });
 
         // Typing indicators
@@ -93,10 +112,10 @@ export const setupSocket = (io: Server) => {
 
 
         socket.on("disconnect", () => {
-             onlineUsers.delete(user.userId);
+            onlineUsers.delete(user.userId);
             console.log("Socket disconnected:", user.userId);
 
-             console.log("Online users:", onlineUsers.size);
+            console.log("Online users:", onlineUsers.size);
 
             // Notify all rooms this socket was part of
             socket.rooms.forEach((roomId) => {

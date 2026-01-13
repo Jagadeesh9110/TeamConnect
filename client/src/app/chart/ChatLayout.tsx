@@ -13,11 +13,6 @@ export default function ChatLayout() {
         useState<Conversation | null>(null);
 
 
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    const triggerRefresh = () => {
-        setRefreshKey((prev) => prev + 1);
-    };
     useEffect(() => {
         if (!activeConversation) return;
 
@@ -43,12 +38,10 @@ export default function ChatLayout() {
 
                 <MessageTimeline
                     conversationId={activeConversation?._id || null}
-                    refreshKey={refreshKey}
                 />
 
                 <MessageComposer
                     conversationId={activeConversation?._id || null}
-                    onMessageSent={triggerRefresh}
                 />
             </div>
         </div>

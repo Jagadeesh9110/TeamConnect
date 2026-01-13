@@ -15,12 +15,11 @@ interface Message {
 
 interface MessageTimelineProps {
     conversationId: string | null;
-    refreshKey: number;
 }
 
 
 
-export default function MessageTimeline({ conversationId, refreshKey }: MessageTimelineProps) {
+export default function MessageTimeline({ conversationId }: MessageTimelineProps) {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
@@ -56,7 +55,7 @@ export default function MessageTimeline({ conversationId, refreshKey }: MessageT
         };
 
         loadMessages();
-    }, [conversationId, refreshKey]);
+    }, [conversationId]);
 
 
     /* 🔥 Socket receive_message listener */
