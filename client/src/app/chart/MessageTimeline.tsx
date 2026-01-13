@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
-import { fetchMessages } from '../../lib/chatApi';
+import { useEffect, useState, useRef } from "react";
+import { fetchMessages } from "../../lib/chatApi";
+import { getSocket } from "../../lib/socket";
 
 interface Message {
     _id: string;
@@ -19,18 +20,21 @@ interface MessageTimelineProps {
 
 
 
-export default function MessageTimeline({ conversationId, refreshKey }: MessageTimelineProps){
+export default function MessageTimeline({ conversationId, refreshKey }: MessageTimelineProps) {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
 
     const bottomRef = useRef<HTMLDivElement | null>(null);
 
+    /* Auto-scroll */
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+
+    /* Initial + refresh load via REST */
     useEffect(() => {
         if (!conversationId) {
             setMessages([]);
@@ -41,7 +45,7 @@ export default function MessageTimeline({ conversationId, refreshKey }: MessageT
         const loadMessages = async () => {
             try {
                 setLoading(true);
-                setError('');
+                setError("");
                 const data = await fetchMessages(conversationId);
                 setMessages(data);
             } catch {
@@ -55,7 +59,29 @@ export default function MessageTimeline({ conversationId, refreshKey }: MessageT
     }, [conversationId, refreshKey]);
 
 
-    // No conversation selected
+    /* 🔥 Socket receive_message listener */
+    useEffect(() => {
+        if (!conversationId) return;
+
+        const socket = getSocket();
+        if (!socket) return;
+
+        const handleReceiveMessage = (payload: {
+            conversationId: string;
+            message: Message;
+        }) => {
+            if (payload.conversationId !== conversationId) return;
+
+            setMessages((prev) => [...prev, payload.message]);
+        };
+
+        socket.on("receive_message", handleReceiveMessage);
+
+        return () => {
+            socket.off("receive_message", handleReceiveMessage);
+        };
+    }, [conversationId]);
+
     if (!conversationId) {
         return (
             <main className="flex-1 flex items-center justify-center text-slate-400 text-sm">
@@ -64,12 +90,11 @@ export default function MessageTimeline({ conversationId, refreshKey }: MessageT
         );
     }
 
-    const formatTime = (date: string) => {
-        return new Date(date).toLocaleTimeString([], {
+    const formatTime = (date: string) =>
+        new Date(date).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
-        })
-    }
+        });
 
 
 
@@ -83,13 +108,13 @@ export default function MessageTimeline({ conversationId, refreshKey }: MessageT
                 <p className="text-sm text-red-400">{error}</p>
             )}
 
-           {!loading && messages.length === 0 && (
+            {!loading && messages.length === 0 && (
                 <p className="text-sm text-slate-400">
                     No messages yet. Start the discussion.
                 </p>
 
             )}
-                
+
             {messages.map((msg) => (
                 <div key={msg._id} className="max-w-3xl w-full">
                     <p className="text-sm text-slate-400 mb-1">
