@@ -1,0 +1,21 @@
+
+enum ParticipantRole {
+  ADMIN
+  MEMBER
+  @@map("participant_role")
+}
+
+model Participant{
+    conversationId String   @map("conversation_id")
+    userId         String   @map("user_id")
+    joinedAt       DateTime @default(now()) @db.Timestamptz(3) @map("joined_at")
+    lastReadAt     DateTime? @db.Timestamptz(3) @map("last_read_at")
+
+    // Relationship definitions
+    conversation   Conversation    @relation(fields: [conversationId], references: [conversationId])
+    user           User            @relation(fields: [userId], references: [userId])
+
+    @@id([conversationId, userId]) // Composite Primary Key for Many-to-Many
+
+    @@map("participants")
+}

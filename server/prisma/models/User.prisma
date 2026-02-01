@@ -1,0 +1,19 @@
+model User {
+  userId      String    @id @default(cuid()) @map("user_id")
+  fullName    String    @db.VarChar(255) @map("full_name")
+  email       String    @unique @db.VarChar(255)
+  password     String    @db.VarChar(255) @map("password")
+  displayName String?   @db.VarChar(100) @map("display_name")
+  phoneNumber String?   @unique @db.VarChar(20) @map("phone_number")
+  isOnline    Boolean   @default(false) @map("is_online")
+  lastSeenAt  DateTime? @default(now()) @db.Timestamptz(3) @map("last_seen_at")
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  //Relationships
+  createdConversations Conversation[] @relation("CreatedConversations")
+  participants         Participant[] 
+  messages             Message[]
+
+  @@map("users") // This renames the table from 'User' to 'users' in Postgres
+}

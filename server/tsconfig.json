@@ -1,15 +1,18 @@
 {
     "compilerOptions": {
-        "target": "ES2020",
-        "module": "CommonJS",
-        "moduleResolution": "Node",
-        "rootDir": "src",
+        "target": "ES2023",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
         "outDir": "dist",
         "strict": true,
         "esModuleInterop": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "types": [
+            "node"
+        ]
     },
     "include": [
-        "src"
+        "src/**/*",
+        "prisma.config.ts"
     ]
 }

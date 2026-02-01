@@ -1,0 +1,25 @@
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+
+  @@map("message_status")
+}
+
+model Message{
+    messageId String  @id @default(cuid()) @map("message_id")
+    content        String        @db.Text
+    status         MessageStatus @default(SENT)
+
+    // Relationship: Conversation
+    conversationId String        @map("conversation_id")
+    conversation   Conversation  @relation(fields: [conversationId], references: [conversationId])
+
+    createdAt DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+
+    // Relationship: Sender
+    senderId       String        @map("sender_id")
+    sender         User          @relation(fields: [senderId], references: [userId])
+
+    @@map("messages")
+}

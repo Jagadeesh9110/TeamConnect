@@ -1,0 +1,25 @@
+enum ConversationType{
+    PRIVATE
+    GROUP 
+
+    @@map("conversation_type")
+}
+
+model Conversation {
+  conversationId String           @id @default(cuid()) @map("conversation_id")
+  type           ConversationType @default(PRIVATE)
+  title          String?          @db.VarChar(255) // Optional, only for groups
+  
+  // Relationship :Creater
+  createdById    String           @map("created_by_id") // Links to users.userId
+  createdBy      User             @relation("CreatedConversations", fields: [createdById], references: [userId])
+
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3) @map("updated_at")
+  
+  // Relationships: Participants & Messages
+  participants   Participant[] 
+  messages       Message[]     
+
+  @@map("conversations")
+}
