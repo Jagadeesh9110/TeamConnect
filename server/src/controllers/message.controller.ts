@@ -1,94 +1,152 @@
-// import { Request, Response } from "express";
-// import { AuthenticatedRequest } from "../middleware/auth.middleware";
-// import Message from "../models/Message";
-// import mongoose from "mongoose";
-// import Conversation from "../models/Conversation";
+import { Response } from 'express';
+import prisma from '../config/prisma.js';
+import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 
+export const userPublicSelect = {
+    id: true,
+    fullName: true,
+    email: true,
+    displayName: true,
+    isOnline: true,
+    lastSeenAt: true
+};
 
-// // send messages
-// /**
-//  *
-//  * @param req Client
-//  → POST /messages
-//  → MongoDB (Message saved)
-//  → MongoDB (Conversation updated)
-//  → Response returned
-//  * @param res
-//  * @returns
-//  */
-// export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
-//     try {
-//         const userId = req.user?.userId;
-//         const { conversationId, content } = req.body;
+// Send message in a conversation
+export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const currentUserId = req.user?.userId;
 
-//         if (!userId) {
-//             return res.status(401).json({ error: "Unauthorized" });
-//         }
+        if (!currentUserId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized"
+            });
+        }
 
-//         if (!conversationId) {
-//             return res.status(400).json({ error: "Missing conversation ID" });
-//         }
-//         if (!content) {
-//             return res.status(400).json({ error: "Missing message content" });
-//         }
+        const { conversationId, content } = req.body;
 
-//         const conversation = await Conversation.findById(conversationId);
-//         if (!conversation) {
-//             return res.status(404).json({ error: "Conversation not found" });
-//         }
+        if (!conversationId || !content?.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: "conversationId and content are required"
+            });
+        }
 
-//         const isParticipant = conversation.participants.some((participant) => participant.toString() === userId);
-//         if (!isParticipant) {
-//             return res.status(403).json({ error: "User is not a participant of this conversation" });
-//         }
+        // Check if conversation exists and user is a participant
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            include: {
+                participants: {
+                    where: { userId: currentUserId }
+                }
+            }
+        });
 
-//         const message = await Message.create({
-//             conversationId: new mongoose.Types.ObjectId(conversationId),
-//             senderId: new mongoose.Types.ObjectId(userId),
-//             content,
-//             status: "sent",
-//         });
+        if (!conversation || conversation.participants.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: "Conversation not found or access denied"
+            });
+        }
 
-//         conversation.lastMessageAt = new Date();
-//         await conversation.save();
+        // Create message
+        const message = await prisma.message.create({
+            data: {
+                conversationId: conversationId,
+                senderId: currentUserId,
+                content: content.trim()
+            },
+            include: {
+                sender: {
+                    select: userPublicSelect
+                }
+            }
+        });
 
-//         return res.status(201).json(message);
+        // Update conversation's updatedAt
+        await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { updatedAt: new Date() }
+        });
 
-//     } catch (error) {
-//         console.error("Send message error", error);
-//         res.status(500).json({ error: "Failed to send message" });
-//     }
-// }
+        return res.status(201).json({
+            success: true,
+            data: { message }
+        });
 
-// // fetch messages
+    } catch (error) {
+        console.error("Send Message Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to send message"
+        });
+    }
+};
 
-// export const fetchMessages = async (req: AuthenticatedRequest, res: Response) => {
-//     try {
+// Get all messages for a conversation
+export const getConversationMessages = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const currentUserId = req.user?.userId;
 
-//         const userId = req.user?.userId;
-//         const { conversationId } = req.params;
+        if (!currentUserId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized"
+            });
+        }
 
-//         if (!userId) {
-//             return res.status(401).json({ error: "Unauthorized" });
-//         }
+        const { conversationId } = req.params;  // From URL: /conversations/:conversationId/messages
 
-//         const conversation = await Conversation.findById(conversationId);
-//         if (!conversation) {
-//             return res.status(404).json({ error: "Conversation not found" });
-//         }
+        if (!conversationId) {
+            return res.status(400).json({
+                success: false,
+                error: "conversationId is required"
+            });
+        }
 
-//         const isParticipant = conversation.participants.some((participant) => participant.toString() === userId);
-//         if (!isParticipant) {
-//             return res.status(403).json({ error: "User is not a participant of this conversation" });
-//         }
+        // Verify user is participant
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            include: {
+                participants: {
+                    where: { userId: currentUserId }
+                }
+            }
+        });
 
-//         const messages = await Message.find({ conversationId: new mongoose.Types.ObjectId(conversationId) })
-//             .sort({ createdAt: 1 });
+        if (!conversation || conversation.participants.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: "Conversation not found or access denied"
+            });
+        }
 
-//         return res.status(200).json(messages);
+        // Fetch all messages
+        const messages = await prisma.message.findMany({
+            where: { conversationId: conversationId },
+            include: {
+                sender: {
+                    select: userPublicSelect
+                }
+            },
+            orderBy: {
+                createdAt: 'asc'  // ✅ Oldest first (chronological chat order)
+            }
+        });
 
-//     } catch (err) {
-//         console.error("Fetch messages error", err)
-//         res.status(500).json({ error: "Failed to fetch messages" })
-//     }
-// }
+        return res.status(200).json({
+            success: true,
+            data: {
+                messages,
+                count: messages.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Get Conversation Messages Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to fetch messages"
+        });
+    }
+};

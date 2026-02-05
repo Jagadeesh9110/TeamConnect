@@ -1,0 +1,20 @@
+
+enum ParticipantRole {
+  ADMIN
+  MEMBER
+  @@map("participant_role")
+}
+
+model Participant {
+  conversationId String @map("conversation_id")
+  userId String @map("user_id")
+  role ParticipantRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @db.Timestamptz(3) @map("joined_at")
+  lastReadAt DateTime? @db.Timestamptz(3) @map("last_read_at")
+  
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@id([conversationId, userId])
+  @@map("participants")
+}

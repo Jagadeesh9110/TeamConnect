@@ -1,59 +1,217 @@
-// import { Request, Response } from "express";
-// import Conversation from "../models/Conversation";
-// import { AuthenticatedRequest } from "../middleware/auth.middleware";
-// import mongoose from 'mongoose';
+import { Response } from 'express';
+import prisma from '../config/prisma.js';
+import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 
-// // Create or get a private conversation between two users
-// export const createPrivateConversation = async (req: AuthenticatedRequest, res: Response) => {
-//     try {
-//         const userId = req.user?.userId;
-//         const { participantId } = req.body;
 
-//         if (!userId || !participantId) {
-//             return res.status(400).json({ error: "Missing required fields" });
-//         }
+// Reusable user select object (DRY principle)
+export const userPublicSelect = {
+    id: true,
+    fullName: true,
+    email: true,
+    displayName: true,
+    isOnline: true,
+    lastSeenAt: true
+};
 
-//         const participants = [
-//             new mongoose.Types.ObjectId(userId),
-//             new mongoose.Types.ObjectId(participantId),
-//         ];
+// Create a PRIVATE conversation between two users (current user + another user)
+export const createPrivateConversation = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { participantId } = req.body;
 
-//         // Check if conversation already exists
-//         const existingConversation = await Conversation.findOne({
-//             participants: { $all: participants },
-//         });
+        // Check if user is authenticated
+        if (!currentUserId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized"
+            });
+        }
 
-//         if (existingConversation) {
-//             return res.status(400).json({ error: "Conversation already exists" });
-//         }
+        // Check if participantId is provided
+        if (!participantId) {
+            return res.status(400).json({
+                success: false,
+                error: "participantId is required"
+            });
+        }
 
-//         const conversation = await Conversation.create({
-//             participants,
-//             type: "private",
-//         });
+        // Check if user is trying to create conversation with themselves
+        if (currentUserId === participantId) {
+            return res.status(400).json({
+                success: false,
+                error: "Cannot create conversation with yourself"
+            });
+        }
 
-//         return res.status(201).json(conversation);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ error: "Failed to create private conversation" });
-//     }
-// };
+        // Check if the other user exists
+        const otherUser = await prisma.user.findUnique({
+            where: { id: participantId }
+        });
 
-// // get all conversations of logged in user
-// export const getAllConversations = async (req: AuthenticatedRequest, res: Response) => {
-//     try {
-//         const userId = req.user?.userId;
-//         if (!userId) {
-//             return res.status(401).json({ error: "Unauthorized" });
-//         }
-//         const conversations = await Conversation.find({
-//             participants: new mongoose.Types.ObjectId(userId)
-//         }).sort({ updatedAt: -1 }).populate("participants", "name email");
+        if (!otherUser) {
+            return res.status(404).json({
+                success: false,
+                error: "User not found"
+            });
+        }
 
-//         return res.status(200).json(conversations);
+        // Check if a PRIVATE conversation already exists between these two users
+        const existingConversation = await prisma.conversation.findFirst({
+            where: {
+                type: "PRIVATE",
+                AND: [
+                    {
+                        participants: {
+                            some: {
+                                userId: currentUserId
+                            }
+                        }
+                    },
+                    {
+                        participants: {
+                            some: {
+                                userId: participantId
+                            }
+                        }
+                    }
+                ]
+            },
+            include: {
+                participants: {
+                    include: {
+                        user: {
+                            select: userPublicSelect
+                        }
+                    }
+                }
+            }
+        });
 
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ error: "Failed to get conversations" });
-//     }
-// }
+        // If conversation exists, return it
+        if (existingConversation) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    conversation: existingConversation,
+                    isNew: false,
+                    message: "Conversation retrieved successfully"
+                }
+            });
+        }
+
+        // Create new PRIVATE conversation with nested participant creation
+        const newConversation = await prisma.conversation.create({
+            data: {
+                type: "PRIVATE",
+                createdById: currentUserId,
+                participants: {
+                    create: [
+                        {
+                            userId: currentUserId
+                        },
+                        {
+                            userId: participantId
+                        }
+                    ]
+                }
+            },
+            include: {
+                participants: {
+                    include: {
+                        user: {
+                            select: userPublicSelect
+                        }
+                    }
+                }
+            }
+        });
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                conversation: newConversation,
+                isNew: true,
+                message: "Conversation created successfully"
+            }
+        });
+
+    } catch (error) {
+        console.error("Create Private Conversation Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to create private conversation"
+        });
+    }
+};
+
+// Fetch all conversations for the authenticated user
+export async function getUserConversations(req:AuthenticatedRequest,res:Response){
+    try{
+        const CurrUserId = req.user?.userId;
+        if(!CurrUserId){
+           return res.status(401).json({
+            success:false,
+            error:"Unauthorized"
+        });
+        }
+        const conversations = await prisma.conversation.findMany({
+            where:{
+                participants:{
+                    some:{
+                        userId:CurrUserId
+                    }
+                }
+            },
+            include:{
+                participants:{
+                    include:{
+                        user: {
+                            select: userPublicSelect
+                        }
+                    }
+                },
+                messages:{
+                     take: 1,  // Get last message
+                    orderBy: {
+                        createdAt: 'desc'
+                    },
+                    select: {
+                        id: true,
+                        content: true,
+                        createdAt: true,
+                        status: true,
+                        senderId: true
+                    }
+                },
+                _count:{
+                    select:{
+                        messages:true
+                    }
+                }
+            },
+             orderBy:{
+                updatedAt:'desc'
+            }
+
+        });
+                
+        return res.status(200).json({
+            success:true,
+            data:{ 
+                conversations, // Could be []
+                count: conversations.length
+            },
+            message:"Conversations fetched successfully"
+        });
+       
+    }
+    catch(error){
+        console.error("Get User Conversations Error:",error);
+        return res.status(500).json({
+            success:false,
+            error:"Failed to fetch conversations"
+        });
+        
+    }
+
+}

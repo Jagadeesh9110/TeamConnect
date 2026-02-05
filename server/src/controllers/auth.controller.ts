@@ -1,80 +1,121 @@
-// import { Request, Response } from 'express';
-// import jwt from 'jsonwebtoken';
-// import User from '../models/User';
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import prisma from '../config/prisma.js';
+import bcrypt from 'bcryptjs';
 
 
-// const generateToken = (userId: string, email: string) => {
-//     return jwt.sign({ userId, email }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
-// }
+const generateToken = (userId:string,email:string)=>{
+    return jwt.sign({userId,email},process.env.JWT_SECRET as string,{expiresIn:'1d'});
+}
 
-// // register a user
-// export const registerUser = async (req: Request, res: Response) => {
-//     try {
-//         const { name, password, email } = req.body;
-//         if (!name || !password || !email) {
-//             return res.status(400).json({ message: "All fields are required" });
-//         }
-//         const existingUser = await User.findOne({ email });
-//         if (existingUser) {
-//             return res.status(409).json({ message: "User already exists" });
-//         }
+// Helper to set cookie
+const sendTokenCookie = (res: Response, token: string) => {
+    res.cookie('token', token, {
+        httpOnly: true, // Prevent XSS
+        secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
+        sameSite: 'strict', // Prevent CSRF
+        maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+};
 
-//         const newUser = new User({
-//             name,
-//             password,
-//             email
-//         })
+// register a user
+export const registerUser= async(req:Request,res:Response)=>{
+     const {fullName, email, password }=req.body;
+     if(!fullName || !email || !password){
+         return res.status(400).json({
+            "data": null,
+            "success": false,
+            "error": "All fields are required"
+        });
+     }
 
-//         await newUser.save();
-//         const token = generateToken(newUser.id.toString(), newUser.email);
-//         return res.status(201).json({
-//             message: "User registered successfully",
-//             token,
-//             user: {
-//                 id: newUser.id,
-//                 name: newUser.name,
-//                 email: newUser.email,
-//             }
-//         })
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+     if (existingUser) {
+        return res.status(409).json({
+            "data": null,
+            "success": false,
+            "error": "User already exists"
+        });
+    }
 
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({ message: "Internal server error" });
-//     }
-// }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-// // login user
-// export const loginUser = async (req: Request, res: Response) => {
-//     try {
-//         const { email, password } = req.body;
+    const newUser = await prisma.user.create({
+        data: { fullName, email, password: hashedPassword }
+    });
+    
+    const token= generateToken(newUser.id,newUser.email);
+    sendTokenCookie(res, token);
+    return res.status(201).json({
+        success: true,
+        data: {
+            message: "User registered successfully",
+            token: token,
+            user: {
+                id: newUser.id,
+                fullName: newUser.fullName,
+                email: newUser.email
+            }
+        }
+    });
+}
 
-//         if (!email || !password) {
-//             return res.status(400).json({ message: "Email and password required" });
-//         }
+// login a user
 
-//         const user = await User.findOne({ email });
-//         if (!user) {
-//             return res.status(401).json({ message: "Invalid credentials" });
-//         }
+export const loginUser = async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
 
-//         const isMatch = await user.comparePassword(password);
-//         if (!isMatch) {
-//             return res.status(401).json({ message: "Invalid credentials" });
-//         }
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: "Email and password required" });
+        }
 
-//         const token = generateToken(user.id.toString(), user.email);
+        // Find user by unique email 
+        const user = await prisma.user.findUnique({ where: { email } });
+        
+        // Check if user exists and verify password
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ success: false, error: "Invalid email or password" });
+        }
 
-//         return res.status(200).json({
-//             message: "Login successful",
-//             token,
-//             user: {
-//                 id: user.id,
-//                 name: user.name,
-//                 email: user.email,
-//             },
-//         });
-//     } catch (error) {
-//         console.error("Login error:", error);
-//         return res.status(500).json({ message: "Internal server error" });
-//     }
-// };
+        // Generate token and set cookie
+        const token = generateToken(user.id, user.email);
+        sendTokenCookie(res, token);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                message: "Login successful",
+                token,
+                user: {
+                    id: user.id,
+                    fullName: user.fullName,
+                    email: user.email,
+                },
+            },
+        });
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+};
+
+
+// logout a user
+export const logoutUser = async (req: Request, res: Response) => {
+    // Set the cookie to an empty string
+    // Set the expiry date to a time in the past (e.g., 0)
+    res.cookie('token', '', {
+        httpOnly: true,
+        expires: new Date(0), // Immediately expires the cookie
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production'
+    });
+
+    return res.status(200).json({
+        success: true,
+        message: "Logged out successfully"
+    });
+};
+

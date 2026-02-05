@@ -1,11 +1,13 @@
-// import { Router } from "express";
-// import { createPrivateConversation, getAllConversations } from "../controllers/conversation.controller";
+import {Router} from "express";
+import { createPrivateConversation, getUserConversations } from "../controllers/conversation.controller.js";
+import  {authMiddleware}  from "../middleware/auth.middleware.js";
 
-// import { authMiddleware } from "../middleware/auth.middleware";
+const router=Router();
 
-// const router = Router();
+// Create a private conversation between two users
+router.post("/private", authMiddleware, createPrivateConversation);
 
-// router.post("/private", authMiddleware, createPrivateConversation);
-// router.get("/", authMiddleware, getAllConversations);
+// Get all conversations for the authenticated user
+router.get("/", authMiddleware, getUserConversations);
 
-// export default router;
+export default router;

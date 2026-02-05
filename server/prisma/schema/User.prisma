@@ -1,5 +1,5 @@
 model User {
-  userId      String    @id @default(cuid()) @map("user_id")
+  id      String    @id @default(cuid()) @map("user_id")
   fullName    String    @db.VarChar(255) @map("full_name")
   email       String    @unique @db.VarChar(255)
   password     String    @db.VarChar(255) @map("password")
