@@ -3,6 +3,10 @@ model User {
   fullName    String    @db.VarChar(255) @map("full_name")
   email       String    @unique @db.VarChar(255)
   password     String    @db.VarChar(255) @map("password")
+  
+  refreshTokenHash String? @map("refresh_token_hash")
+  tokenVersion Int @default(0) @map("token_version")
+
   displayName String?   @db.VarChar(100) @map("display_name")
   phoneNumber String?   @unique @db.VarChar(20) @map("phone_number")
   isOnline    Boolean   @default(false) @map("is_online")

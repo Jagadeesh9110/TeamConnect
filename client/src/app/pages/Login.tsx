@@ -4,15 +4,15 @@ import AuthLayout from "../layout/AuthLayout";
 import TeamConnectLogo from "../components/TeamConnectLogo";
 import { loginUser } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../store/authStore";
 
 export default function LoginPage() {
-
     const navigate = useNavigate();
+    const { setAuth } = useAuthStore(); // Get Zustand setter
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -20,42 +20,27 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         setError("");
+
         try {
-            const data = await loginUser(email, password);
-
-            // store token
-            localStorage.setItem("accessToken", data.token);
-
-            console.log("Login success:", data.user);
-
+            const response = await loginUser(email, password);
+            
+            // Update Zustand store with user data
+            setAuth(response.data.user, response.accessToken);
             navigate("/app");
-
+            
         } catch (err: any) {
             console.error("Login failed:", err);
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return (
         <AuthLayout>
-            {/* Glass Card Container */}
-            <div className="
-                w-full max-w-[420px]
-                p-8 md:p-10
-                rounded-3xl
-                bg-white/10
-                backdrop-blur-xl 
-                border border-white/20
-                shadow-[0_0_40px_rgba(0,0,0,0.3)]
-                animate-in fade-in zoom-in duration-500
-            ">
-                {/* Logo & Header */}
+            <div className="w-full max-w-[420px] p-8 md:p-10 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_40px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-500">
                 <div className="flex flex-col items-center mb-10">
-                    {/* Logo moves slightly up/down for floaty effect if desired */}
                     <TeamConnectLogo className="w-16 h-16 text-white mb-6 opacity-90 drop-shadow-lg" />
-
                     <h1 className="text-2xl md:text-3xl font-medium text-white tracking-tight">
                         Sign in to TeamConnect
                     </h1>
@@ -67,10 +52,7 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                {/* Form Inputs */}
-                 <form onSubmit={handleSubmit} className="space-y-5">
-
-                    {/* Email Field */}
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-400 transition-colors duration-300" />
@@ -81,20 +63,10 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="
-                                w-full pl-11 pr-4 py-3.5
-                                bg-navy-900/50 
-                                border border-white/10 
-                                rounded-xl
-                                text-white 
-                                placeholder:text-slate-500
-                                focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent
-                                transition-all duration-300
-                            "
+                            className="w-full pl-11 pr-4 py-3.5 bg-navy-900/50 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300"
                         />
                     </div>
 
-                    {/* Password Field */}
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-400 transition-colors duration-300" />
@@ -105,18 +77,8 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="
-                                w-full pl-11 pr-12 py-3.5
-                                bg-navy-900/50 
-                                border border-white/10 
-                                rounded-xl
-                                text-white 
-                                placeholder:text-slate-500
-                                focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent
-                                transition-all duration-300
-                            "
+                            className="w-full pl-11 pr-12 py-3.5 bg-navy-900/50 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300"
                         />
-                        {/* Eye Toggle Button */}
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
@@ -126,32 +88,18 @@ export default function LoginPage() {
                         </button>
                     </div>
 
-                    {/* Sign In Button */}
                     <button
                         type="submit"
                         disabled={loading}
-                        className="
-                            w-full py-3.5 mt-2
-                            bg-gradient-to-r from-blue-600 to-blue-700
-                            hover:from-blue-500 hover:to-blue-600
-                            text-white font-medium text-lg
-                            rounded-xl
-                            shadow-[0_4px_20px_rgba(37,99,235,0.4)]
-                            hover:shadow-[0_6px_25px_rgba(37,99,235,0.6)]
-                            transition-all duration-300
-                            transform active:scale-[0.98]
-                            disabled:opacity-60 disabled:cursor-not-allowed
-                        "
+                        className="w-full py-3.5 mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-medium text-lg rounded-xl shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_25px_rgba(37,99,235,0.6)] transition-all duration-300 transform active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                         {loading ? "Signing in…" : "Sign In"}
+                        {loading ? "Signing in…" : "Sign In"}
                     </button>
-
                 </form>
 
-                {/* Footer Link */}
                 <div className="mt-8 text-center">
                     <p className="text-slate-400 text-sm">
-                        Don’t have an account?{" "}
+                        Don't have an account?{" "}
                         <a href="/register" className="text-blue-400 hover:text-blue-300 font-medium underline-offset-4 hover:underline transition-colors">
                             Sign up
                         </a>

@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 export default function RegisterPage() {
 
     const navigate = useNavigate();
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -24,14 +25,11 @@ export default function RegisterPage() {
         setLoading(true);
         setError("");
         try {
-            const data = await registerUser(name, email, password);
+           const response = await registerUser(name, email, password);
+           console.log("Registration successful:", response.data.message);
 
-            // store token
-            localStorage.setItem("accessToken", data.token);
-
-            console.log("Registration success:", data);
-
-            navigate("/app");
+            navigate("/login");
+            
         } catch (err: any) {
             console.error("Registration failed:", err);
             setError(err.message);

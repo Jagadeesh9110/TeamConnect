@@ -1,39 +1,20 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { apiClient } from "./apiClient";
 
-export const loginUser = async (email: string, password: string) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-    })
-
-    const data = await res.json();
-    if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-    }
-    return data;
+export const registerUser = async (name: string, email: string, password: string) => {
+  const res = await apiClient.post("/auth/register", { fullName: name, email, password });
+  return res.data; // { message, user }
 }
 
-export const registerUser = async (
-    name: string,
-    email: string,
-    password: string
-) => {
-    const res = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-    });
+export const loginUser = async (email: string, password: string) => {
+  const res = await apiClient.post("/auth/login", { email, password });
+  return res.data; // { accessToken, user }
+};
 
-    const data = await res.json();
+export const logoutUser = async () => {
+  await apiClient.post("/auth/logout");
+};
 
-    if (!res.ok) {
-        throw new Error(data.message || "Registration failed");
-    }
-
-    return data;
+export const getMe = async () => {
+  const res = await apiClient.get("/auth/me");
+  return res.data.user;
 };
