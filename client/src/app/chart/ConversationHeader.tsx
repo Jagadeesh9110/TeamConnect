@@ -1,13 +1,7 @@
+import { type Conversation } from "../../types/conversation";
+
 interface ConversationHeaderProps {
-    conversation: {
-        _id: string;
-        participants: {
-            _id: string;
-            name: string;
-            email: string;
-        }[];
-        type: "private" | "group";
-    } | null;
+  conversation: Conversation | null;
 }
 
 export default function ConversationHeader({
@@ -23,10 +17,14 @@ export default function ConversationHeader({
         );
     }
 
-    const title =
-        conversation.type === "group"
-            ? "Group Discussion"
-            : conversation.participants.map(p => p.name).join(", ");
+ const title =
+  conversation.type === "GROUP"
+    ? "Group Discussion"
+    : conversation.participants
+        .map(p => p.user.fullName)
+        .join(", ");
+
+
 
     return (
         <header className="h-16 border-b border-white/5 flex items-center px-6 bg-navy-900/80 backdrop-blur">

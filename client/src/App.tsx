@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./app/routes/Login";
-import RegisterPage from "./app/routes/Register";
-import ProtectedRoute from "./app/routes/ProtectedRoute";
+import LoginPage from "./app/pages/Login";
+import RegisterPage from "./app/pages/Register";
+import ProtectedRoute from "./app/pages/ProtectedRoute";
 import ChatLayout from "./app/chart/ChatLayout";
 import { useAuthInit } from "./hooks/useAuthInit";
 import { useAuthStore } from "./store/authStore";

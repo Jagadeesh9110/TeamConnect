@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getSocket } from "../../lib/socket";
+import { sendMessage } from "../../lib/api";
 
 interface MessageComposerProps {
     conversationId: string | null;
@@ -12,21 +12,20 @@ export default function MessageComposer({
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!conversationId || !content.trim()) return;
 
-        const socket = getSocket();
-        if (!socket) return;
-
         setSending(true);
+        try{
+            await sendMessage(conversationId, content.trim());
+            setContent("");
 
-        socket.emit("send_message", {
-            conversationId,
-            content: content.trim(),
-        });
-
-        setContent("");
-        setSending(false);
+        }catch(err){
+            console.error("Failed to send message:", err);
+             // Optionally, you can show an error message to the user here
+        }finally{
+            setSending(false);
+        }
     };
 
     return (

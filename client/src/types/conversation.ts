@@ -1,13 +1,26 @@
-export interface Conversation {
-    _id: string;
-    type: "private" | "group";
-    participants: {
-        _id: string;
-        name: string;
-        email: string;
-    }[];
-    lastMessageAt?: string;
+export interface UserPublic {
+  id: string;
+  fullName: string;
+  email: string;
 }
+
+export interface Participant {
+  user: UserPublic;
+}
+
+export interface Conversation {
+  id: string;
+  type: "PRIVATE" | "GROUP";
+  participants: Participant[];
+}
+
+export interface Message {
+  id: string;
+  content: string;
+  createdAt: string;
+  sender: UserPublic;
+}
+
 
 
 /**

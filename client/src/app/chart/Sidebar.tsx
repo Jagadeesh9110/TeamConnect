@@ -1,84 +1,78 @@
 import { useEffect, useState } from "react";
-import { fetchConversations } from "../../lib/chatApi";
-
-interface Conversation {
-    _id: string;
-    participants: { _id: string; name: string; email: string }[];
-    type: "private" | "group";
-}
+import { getUserConversations } from "../../lib/api";
+import {type Conversation } from "../../types/conversation";
 
 interface SidebarProps {
-    activeConversation: Conversation | null;
-    onSelectConversation: (conversation: Conversation) => void;
+  activeConversation: Conversation | null;
+  onSelectConversation: (conversation: Conversation) => void;
 }
 
-
 export default function Sidebar({
-    activeConversation,
-    onSelectConversation,
+  activeConversation,
+  onSelectConversation,
 }: SidebarProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-     const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const data = await getUserConversations();
+        setConversations(data);
+      } catch {
+        setError("Failed to load conversations");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    useEffect(() => {
-        const loadConversations = async () => {
-            try {
-                const data = await fetchConversations();
-                setConversations(data);
-            } catch (err) {
-                setError("Failed to load conversations");
-            } finally {
-                setLoading(false);
-            }
-        };
+    loadConversations();
+  }, []);
 
-        loadConversations();
-    }, []);
+  return (
+    <aside className="w-72 border-r border-white/5 bg-navy-800/60 backdrop-blur-xl">
+      <div className="p-6">
+        <h2 className="text-sm font-medium text-slate-400 mb-4">
+          Conversations
+        </h2>
 
+        {loading && (
+          <p className="text-sm text-slate-500">Loading conversations…</p>
+        )}
 
-    return (
-        <aside className="w-72 border-r border-white/5 bg-navy-800/60 backdrop-blur-xl">
-            <div className="p-6">
-                <h2 className="text-sm font-medium text-slate-400 mb-4">
-                    Conversations
-                </h2>
+        {error && (
+          <p className="text-sm text-red-400">{error}</p>
+        )}
 
-                    {loading && (
-                    <p className="text-sm text-slate-500">Loading conversations…</p>
-                )}
+        <div className="space-y-1">
+          {conversations.map((conv) => {
+            const isActive = conv.id === activeConversation?.id;
 
-                {error && (
-                    <p className="text-sm text-red-400">{error}</p>
-                )}
-                <div className="space-y-1">
-                    {conversations.map((conv) => {
-                        const isActive = conv._id === activeConversation?._id;
-
-                        return (
-                            <button
-                                key={conv._id}
-                                onClick={() => onSelectConversation(conv)}
-                                className={`
+            return (
+              <button
+                key={conv.id}
+                onClick={() => onSelectConversation(conv)}
+                className={`
                   w-full text-left px-3 py-2 rounded-md text-sm
                   transition-colors
-                  ${isActive
-                                        ? "border-l-2 border-cyan-400 bg-white/5"
-                                        : "hover:bg-white/5 text-slate-300"
-                                    }
+                  ${
+                    isActive
+                      ? "border-l-2 border-cyan-400 bg-white/5"
+                      : "hover:bg-white/5 text-slate-300"
+                  }
                 `}
-                            >
-                                <div className="truncate">
-                                    {conv.type === "group"
-                                        ? "Group Conversation"
-                                        : "Private Conversation"}
-                                </div>
-                            </button>
-                        );
-                    })}
+              >
+                <div className="truncate">
+                  {conv.type === "GROUP"
+                    ? "Group Conversation"
+                    : "Private Conversation"}
                 </div>
-            </div>
-        </aside>
-    );
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </aside>
+  );
 }

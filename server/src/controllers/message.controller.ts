@@ -84,69 +84,83 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Get all messages for a conversation
-export const getConversationMessages = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const currentUserId = req.user?.userId;
+// Get all messages for a conversation
+export const getConversationMessages = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const currentUserId = req.user?.userId;
 
-        if (!currentUserId) {
-            return res.status(401).json({
-                success: false,
-                error: "Unauthorized"
-            });
-        }
-
-        const { conversationId } = req.params;  // From URL: /conversations/:conversationId/messages
-
-        if (!conversationId) {
-            return res.status(400).json({
-                success: false,
-                error: "conversationId is required"
-            });
-        }
-
-        // Verify user is participant
-        const conversation = await prisma.conversation.findUnique({
-            where: { id: conversationId },
-            include: {
-                participants: {
-                    where: { userId: currentUserId }
-                }
-            }
-        });
-
-        if (!conversation || conversation.participants.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: "Conversation not found or access denied"
-            });
-        }
-
-        // Fetch all messages
-        const messages = await prisma.message.findMany({
-            where: { conversationId: conversationId },
-            include: {
-                sender: {
-                    select: userPublicSelect
-                }
-            },
-            orderBy: {
-                createdAt: 'asc'  // ✅ Oldest first (chronological chat order)
-            }
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                messages,
-                count: messages.length
-            }
-        });
-
-    } catch (error) {
-        console.error("Get Conversation Messages Error:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Failed to fetch messages"
-        });
+    if (!currentUserId) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized",
+      });
     }
+
+    const conversationId = req.params.conversationId;
+
+    // params can be string | string[]
+    if (!conversationId || Array.isArray(conversationId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid conversationId",
+      });
+    }
+
+    // Verify user is a participant
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        participants: {
+          where: { userId: currentUserId },
+        },
+      },
+    });
+ 
+
+    // Check if conversation exists and user is a participant
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: "Conversation not found or access denied",
+      });
+    }
+ 
+    // Check if user is a participant
+    if (conversation.participants.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied",
+      });
+    }
+
+    // Fetch messages
+    const messages = await prisma.message.findMany({
+      where: { conversationId },
+      include: {
+        sender: {
+          select: userPublicSelect,
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        messages,
+        count: messages.length,
+      },
+    });
+  } catch (error) {
+    console.error("Get Conversation Messages Error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch messages",
+    });
+  }
 };
