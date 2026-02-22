@@ -10,34 +10,8 @@ export default function ChatLayout() {
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
 
-  // Knowledge Hub: collapsed (narrow), default (35%), expanded (45%)
-  const [hubMode, setHubMode] = useState<"collapsed" | "default" | "expanded">(
-    "default"
-  );
-
-  const hubWidth =
-    hubMode === "collapsed"
-      ? "0%"
-      : hubMode === "expanded"
-        ? "45%"
-        : "35%";
-
-  const centerWidth =
-    hubMode === "collapsed"
-      ? "100%"
-      : hubMode === "expanded"
-        ? "55%"
-        : "65%";
-
-  const toggleHub = () => {
-    setHubMode((prev) =>
-      prev === "collapsed"
-        ? "default"
-        : prev === "default"
-          ? "expanded"
-          : "collapsed"
-    );
-  };
+  // Knowledge Hub: default (35%) or expanded (45%)
+  const [hubExpanded, setHubExpanded] = useState(false);
 
   return (
     <div className="h-screen w-full bg-[#0b1220] text-white flex overflow-hidden">
@@ -47,23 +21,22 @@ export default function ChatLayout() {
         onSelectConversation={setActiveConversation}
       />
 
-      {/* ─ Content area (fills remaining space after sidebar) ──── */}
+      {/* ─ Content area ─────────────────────────────────────────── */}
       <div className="flex-1 flex min-w-0">
         {/* ─ Center: Conversation area ──────────────────────────── */}
         <div
           className="flex flex-col min-w-0 transition-all duration-300 ease-in-out"
-          style={{ width: centerWidth }}
+          style={{ width: hubExpanded ? "55%" : "65%" }}
         >
           <ConversationHeader conversation={activeConversation} />
           <MessageTimeline conversationId={activeConversation?.id || null} />
           <MessageComposer conversationId={activeConversation?.id || null} />
         </div>
 
-        {/* ─ Right: Knowledge Hub (collapsible) ─────────────────── */}
+        {/* ─ Right: Knowledge Hub ───────────────────────────────── */}
         <KnowledgeHub
-          mode={hubMode}
-          width={hubWidth}
-          onToggle={toggleHub}
+          expanded={hubExpanded}
+          onToggle={() => setHubExpanded((prev) => !prev)}
         />
       </div>
     </div>
