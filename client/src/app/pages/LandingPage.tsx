@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
-    MessageSquare,
-    Shield,
+    GitBranch,
+    BookOpen,
     Zap,
     Search,
     Bell,
@@ -65,15 +65,18 @@ function Hero() {
         <section className="pt-36 pb-24 px-6 text-center">
             <div className="max-w-3xl mx-auto">
                 <p className="text-accent text-sm font-medium tracking-wider uppercase mb-4">
-                    Team messaging, reimagined
+                    Clarity-focused collaboration
                 </p>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text-primary leading-tight tracking-tight">
-                    Focus on what matters.{" "}
-                    <span className="text-text-secondary">Let the noise fade away.</span>
+                    Conversations become decisions.{" "}
+                    <span className="text-text-secondary">
+                        Decisions become knowledge.
+                    </span>
                 </h1>
                 <p className="mt-6 text-lg text-text-secondary max-w-xl mx-auto leading-relaxed">
-                    TeamConnect brings clarity to team communication — structured channels,
-                    searchable history, and zero distractions.
+                    TeamConnect turns real-time conversations into structured,
+                    searchable decision records — without sacrificing fast
+                    collaboration.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-4 flex-wrap">
                     <Link
@@ -101,19 +104,19 @@ function Hero() {
 const problems = [
     {
         icon: Bell,
-        text: "Constant notification overload across scattered tools",
+        text: "Critical decisions buried under constant notification noise",
     },
     {
         icon: Search,
-        text: "Searching endlessly for that one message buried in noise",
+        text: "No way to find the reasoning behind past decisions",
     },
     {
         icon: Clock,
-        text: "Context-switching between 5+ apps just to stay aligned",
+        text: "Context lost every time you switch between fragmented tools",
     },
     {
         icon: FolderOpen,
-        text: "Important decisions lost in unstructured chat threads",
+        text: "Discussions that never resolve into clear outcomes",
     },
 ];
 
@@ -122,10 +125,10 @@ function ProblemSection() {
         <section className="py-20 px-6">
             <div className="max-w-3xl mx-auto">
                 <h2 className="text-2xl sm:text-3xl font-semibold text-text-primary text-center mb-4">
-                    Team communication is broken
+                    Your team's best thinking is getting lost
                 </h2>
                 <p className="text-text-secondary text-center mb-12 max-w-lg mx-auto">
-                    Most tools create more noise than clarity. Sound familiar?
+                    Chat tools optimise for speed, not clarity. Sound familiar?
                 </p>
                 <div className="grid gap-5 sm:grid-cols-2">
                     {problems.map((item, i) => (
@@ -150,22 +153,22 @@ function ProblemSection() {
 /* ------------------------------------------------------------------ */
 const features = [
     {
-        icon: MessageSquare,
-        title: "Structured Channels",
+        icon: GitBranch,
+        title: "Decision-Centric Workstreams",
         description:
-            "Organize conversations by project, team, or topic. Every discussion has a home — no more hunting through random threads.",
+            "Every discussion has a lifecycle — from draft to resolved. Threads stay focused and always lead to clear outcomes.",
     },
     {
-        icon: Shield,
-        title: "Secure by Default",
+        icon: BookOpen,
+        title: "Structured Knowledge Layer",
         description:
-            "End-to-end encryption, role-based access, and audit logs. Your team's conversations stay private and compliant.",
+            "Summaries, action items, and decision logs are first-class artifacts — searchable long after the conversation ends.",
     },
     {
         icon: Zap,
-        title: "Real-Time & Fast",
+        title: "Real-Time Collaboration Backbone",
         description:
-            "Instant messaging powered by WebSockets. Sub-second delivery with typing indicators and live presence.",
+            "Low-latency messaging built on secure WebSockets. Typing indicators, live presence, and sub-second delivery.",
     },
 ];
 
@@ -175,10 +178,10 @@ function FeaturesSection() {
             <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-16">
                     <h2 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-4">
-                        Built for productive teams
+                        What makes TeamConnect different
                     </h2>
                     <p className="text-text-secondary max-w-md mx-auto">
-                        Everything you need to keep your team aligned — nothing you don't.
+                        Structured discussions. Context clarity. Reduced noise. Persistent history.
                     </p>
                 </div>
                 <div className="grid gap-6 md:grid-cols-3">
@@ -273,11 +276,11 @@ function FinalCTA() {
                     <CheckCircle2 className="w-10 h-10 text-accent" />
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-4">
-                    Ready to bring your team together?
+                    Ready for clarity in every conversation?
                 </h2>
                 <p className="text-text-secondary mb-8 max-w-md mx-auto">
-                    Join teams that have already moved past the noise. Start free — no
-                    credit card, no setup headaches.
+                    Join teams that stopped losing decisions in chat. Start free
+                    — no credit card, no setup headaches.
                 </p>
                 <Link
                     to="/register"
