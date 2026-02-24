@@ -1,0 +1,16 @@
+model Workspace {
+  id          String   @id @default(cuid()) @map("workspace_id")
+  name        String   @db.VarChar(255)
+  description String?  @db.VarChar(500)
+
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("CreatedWorkspaces", fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  members       WorkspaceMember[]
+  conversations Conversation[]
+
+  @@map("workspaces")
+}

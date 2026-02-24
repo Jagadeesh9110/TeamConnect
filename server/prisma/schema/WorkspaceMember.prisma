@@ -1,0 +1,20 @@
+enum WorkspaceRole {
+  OWNER
+  MEMBER
+
+  @@map("workspace_role")
+}
+
+model WorkspaceMember {
+  workspaceId String @map("workspace_id")
+  userId      String @map("user_id")
+
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now()) @db.Timestamptz(3) @map("joined_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@map("workspace_members")
+}

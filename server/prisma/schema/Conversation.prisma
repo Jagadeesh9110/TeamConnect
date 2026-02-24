@@ -9,6 +9,9 @@ model Conversation {
   id String           @id @default(cuid()) @map("conversation_id")
   type           ConversationType @default(PRIVATE)
   title          String?          @db.VarChar(255) // Optional, only for groups
+
+  workspaceId   String           @map("workspace_id")
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
   // Relationship :Creater
   createdById    String           @map("created_by_id") // Links to users.userId
