@@ -1,126 +1,296 @@
 # TeamConnect
-A real-time secure team messaging platform with AI-powered summarization and assistance, designed for productive team communication using WebSockets
 
-**Real-time collaboration meets AI intelligence—turning messy group chats into structured, actionable workflows.**
-
-TeamConnect is a purpose-built communication platform designed for **engineering and academic teams** who need more than just "chat." It combines low-latency, WebSocket-based real-time messaging with an intelligent AI layer that parses conversations to extract context, summarize long threads, and highlight action items.
-
-Unlike social apps (WhatsApp) built for engagement or enterprise suites (Teams) that can become noisy firehoses, TeamConnect focuses on **signal-over-noise**. It provides a distraction-free environment where project history is preserved and transformed into retrieval-ready intelligence, ensuring users can catch up in seconds—not minutes.
-
-## ❓ The Problem
-
-In fast-paced project environments, **information overload** is a critical bottleneck:
-*   **Context Decay**: Key decisions made 200 messages ago get buried under "catch-up" chatter.
-*   **The "Catch-Up" Tax**: Team members returning after a few hours offline struggle to find relevant tasks without scrolling endlessly.
-*   **Tool Mismatch**: Social apps lack structure for work, while full enterprise tools are often too heavy or expensive for agile student/project groups.
-
-**TeamConnect** solves this by integrating **AI summarization directly into the message loop**, acting as a real-time scribe that organizes chaos into clarity.
-
+A secure, multi-workspace team collaboration backend built with TypeScript, Express, PostgreSQL, and Prisma. Designed as a production-grade foundation for real-time team communication with workspace isolation, role-based access control, and a rotating JWT authentication strategy.
 
 ---
 
-## 🚀 Features
+## Problem Statement
 
-### Core Messaging
-- Secure user authentication using JWT
-- One-to-one and group conversations
-- Real-time message delivery using WebSockets
-- Online/offline presence indication
-- Typing indicators
-- Message delivery and read receipts
-- Persistent message history
+Existing team communication tools fall into two extremes: lightweight social messaging apps that lack structure for professional work, and heavyweight enterprise suites that are complex and expensive for small teams.
 
-### AI-Assisted Productivity
-- Conversation summarization for long chat threads
-- AI-generated reply suggestions
-- Action and key-point extraction from discussions
-- AI-powered message improvement (optional)
+TeamConnect addresses this gap by providing a **backend-first collaboration platform** where:
 
-### Platform Focus
-- Designed for team and group communication
-- Not dependent on mobile devices
-- Structured and productivity-oriented messaging
+- Workspaces isolate teams and their data at the query level
+- Membership and permissions are enforced before any resource is accessed
+- Conversations (private and group) are scoped to workspaces
+- Authentication uses short-lived access tokens with secure, rotating refresh tokens
+
+The architecture is designed to support real-time features (WebSockets) and AI-assisted productivity as future layers on top of a solid, secure backend.
 
 ---
 
-## 🛠 Tech Stack
+## Architecture Overview
 
-### Frontend
-- React.js (TypeScript)
-- TailwindCSS
-- WebSocket Client
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Client (React)                      │
+│         Vite · TypeScript · TailwindCSS · Zustand       │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTPS (REST)
+┌──────────────────────▼──────────────────────────────────┐
+│                  API Server (Express 5)                  │
+│                                                         │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │    Auth      │  │  Workspace   │  │ Conversations │  │
+│  │  Controller  │  │  Controller  │  │  + Messages   │  │
+│  └──────┬──────┘  └──────┬───────┘  └──────┬────────┘  │
+│         │                │                  │           │
+│  ┌──────▼──────────────────────────────────▼────────┐  │
+│  │              Auth Middleware (JWT)                │  │
+│  │         Bearer token verification on all         │  │
+│  │            protected routes                      │  │
+│  └──────────────────────┬───────────────────────────┘  │
+│                         │                               │
+│  ┌──────────────────────▼───────────────────────────┐  │
+│  │            Prisma ORM (Query Layer)              │  │
+│  │       Workspace-scoped queries enforce           │  │
+│  │           multi-tenant isolation                 │  │
+│  └──────────────────────┬───────────────────────────┘  │
+└─────────────────────────┼───────────────────────────────┘
+                          │
+              ┌───────────▼────────────┐
+              │   PostgreSQL (Docker)  │
+              │   6 tables · enums ·   │
+              │   composite keys       │
+              └────────────────────────┘
+```
+
+---
+
+## Security Model
+
+### Authentication
+
+| Mechanism | Detail |
+|-----------|--------|
+| **Access Token** | Short-lived JWT (Bearer), contains `userId`, `email`, `tokenVersion` |
+| **Refresh Token** | Longer-lived JWT stored as HTTP-only secure cookie, scoped to `/api/auth/refresh` |
+| **Token Rotation** | Every refresh issues a new refresh token and invalidates the previous one |
+| **Token Hashing** | Refresh tokens are SHA-256 hashed before database storage |
+| **Token Versioning** | `tokenVersion` on User model enables server-side session invalidation |
+| **Cookie Security** | `httpOnly`, `secure` (production), `sameSite: lax` |
+
+### Authorization
+
+- **Workspace isolation**: Every data query is scoped to a workspace. Users must be verified members before accessing any workspace resource.
+- **Role-based access**: `OWNER` and `MEMBER` roles on `WorkspaceMember`. Only owners can add/remove members or delete workspaces.
+- **Conversation access**: Users can only access conversations they are participants in.
+
+---
+
+## Database Design
+
+PostgreSQL with Prisma ORM. Schema uses a multi-file layout (`prismaSchemaFolder`).
+
+```
+┌──────────┐       ┌─────────────────┐       ┌──────────────┐
+│   User   │───┐   │ WorkspaceMember  │   ┌──│  Workspace   │
+│          │   └──▶│  (composite PK)  │◀──┘  │              │
+│ id       │       │ workspaceId      │      │ id           │
+│ email    │       │ userId           │      │ name         │
+│ password │       │ role (OWNER|     │      │ createdById  │
+│ isOnline │       │       MEMBER)    │      └──────┬───────┘
+│ tokenVer │       └─────────────────┘              │
+└────┬─────┘                                        │
+     │           ┌──────────────┐                   │
+     │      ┌───▶│ Conversation │◀──────────────────┘
+     │      │    │              │
+     │      │    │ id           │
+     │      │    │ type (PRIVATE│
+     │      │    │      |GROUP) │
+     │      │    │ workspaceId  │
+     │      │    └──────┬───────┘
+     │      │           │
+     │  ┌───┴────┐  ┌───▼─────┐
+     └─▶│Participant│ │ Message │
+        │          │  │         │
+        │ convId   │  │ content │
+        │ userId   │  │ status  │
+        └──────────┘  │ senderId│
+                      └─────────┘
+```
+
+**Key design decisions:**
+- `WorkspaceMember` uses a composite primary key `(workspaceId, userId)` — enforces uniqueness at the database level
+- `Conversation` is always scoped to a workspace via `workspaceId` foreign key with `onDelete: Cascade`
+- `Message.status` enum (`SENT | DELIVERED | READ`) is schema-ready for read receipts
+- All timestamps use `Timestamptz(3)` for timezone-aware precision
+- Online presence fields (`isOnline`, `lastSeenAt`) updated on login/logout
+
+---
+
+## API Reference
+
+All protected routes require `Authorization: Bearer <accessToken>`.
+
+### Auth (`/api/auth`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/register` | — | Create a new user account |
+| POST | `/login` | — | Authenticate and receive tokens |
+| POST | `/refresh` | Cookie | Rotate refresh token, get new access token |
+| POST | `/logout` | Bearer | Invalidate refresh token, set user offline |
+| GET | `/me` | Bearer | Get current user profile |
+
+### Workspaces (`/api/workspaces`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/` | Bearer | Create a workspace (creator becomes OWNER) |
+| GET | `/` | Bearer | List all workspaces for the current user |
+| GET | `/:workspaceId` | Bearer | Get workspace details with members |
+| POST | `/:workspaceId/members` | Bearer | Add members (OWNER only) |
+| DELETE | `/:workspaceId/members/:userId` | Bearer | Remove a member (OWNER only) |
+| DELETE | `/:workspaceId` | Bearer | Delete workspace (OWNER only) |
+
+### Conversations (`/api/conversations`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/private` | Bearer | Create or retrieve a private conversation |
+| GET | `/?workspaceId=` | Bearer | List conversations in a workspace |
+
+### Messages (`/api/messages`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/` | Bearer | Send a message to a conversation |
+| GET | `/:conversationId/messages` | Bearer | Get all messages in a conversation |
+
+### Response Format
+
+All endpoints return a consistent envelope:
+
+```json
+// Success
+{ "success": true, "data": { ... } }
+
+// Error
+{ "success": false, "error": "Human-readable error message" }
+```
+
+---
+
+## Tech Stack
 
 ### Backend
-- Node.js
-- Express.js
-- WebSocket Server
-- JWT Authentication
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Node.js | 20+ | Runtime |
+| Express | 5.x | HTTP framework |
+| TypeScript | 5.9 | Type safety |
+| Prisma | 7.x | ORM and migrations |
+| PostgreSQL | 15+ | Primary database |
+| JWT | — | Authentication tokens |
+| bcryptjs | — | Password hashing |
+| Docker Compose | — | Database container |
 
-### Database
-- MongoDB
-
-### AI Integration
-- Gemini API (server-side only)
-
-### Optional (for scaling)
-- Redis + Pub/Sub (used only when multiple backend servers are deployed)
-
----
-
-## 🧩 System Architecture (High-Level)
-chat-app/
-│
-├── client/                     # React + TypeScript
-│   ├── HTTPS                  # REST APIs
-│   └── WSS                    # WebSockets
-│
-└── server/                     # Node.js + Express
-    ├── MongoDB                # Users, Messages, Conversations
-    ├── Gemini API             # AI Assistance
-    └── Redis Pub/Sub          # (optional, for scaling)
-
+### Frontend
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| React | 19 | UI framework |
+| Vite | 7.x | Build tool and dev server |
+| TypeScript | 5.9 | Type safety |
+| TailwindCSS | 3.x | Styling |
+| Zustand | 5.x | State management |
+| Axios | — | HTTP client |
+| React Router | 7.x | Client-side routing |
 
 ---
 
-## 🔐 Security
+## Getting Started
 
-- JWT-based authentication for REST APIs and WebSocket connections
-- Secure handling of user sessions
-- Environment-based configuration for sensitive keys
-- AI requests handled only by the backend
+### Prerequisites
+- Node.js 20+
+- Docker (for PostgreSQL)
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Jagadeesh9110/TeamConnect.git
+cd TeamConnect
+
+# Start PostgreSQL
+cd server
+docker compose up -d
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your database URL and JWT secrets
+
+# Run database migrations
+npx prisma migrate dev
+
+# Start the development server
+npm run dev
+```
+
+```bash
+# In a separate terminal — start the client
+cd client
+npm install
+npm run dev
+```
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
-
-
+```
 TeamConnect/
+├── client/                         # React frontend
+│   └── src/
+│       ├── app/                    # Pages, components, layouts
+│       ├── hooks/                  # Custom React hooks
+│       ├── lib/                    # API client, utilities
+│       ├── store/                  # Zustand state management
+│       └── types/                  # TypeScript type definitions
 │
-├── client/                     # React frontend (TypeScript + TailwindCSS)
+├── server/                         # Express backend
+│   ├── prisma/
+│   │   └── schema/                 # Multi-file Prisma schema
+│   │       ├── User.prisma
+│   │       ├── Workspace.prisma
+│   │       ├── WorkspaceMember.prisma
+│   │       ├── Conversation.prisma
+│   │       ├── Participant.prisma
+│   │       └── Message.prisma
+│   └── src/
+│       ├── controllers/            # Request handlers
+│       ├── middleware/             # JWT auth middleware
+│       ├── routes/                 # Route definitions
+│       ├── utils/                  # Token generation helpers
+│       ├── config/                 # Prisma client setup
+│       ├── app.ts                  # Express app configuration
+│       └── server.ts               # Server entry point
 │
-├── server/                     # Node.js backend (Express + WebSockets)
-│
-├── README.md
-├── .gitignore
-└── LICENSE
-
+└── README.md
+```
 
 ---
 
-## 🎯 Project Objective
+## Roadmap
 
-The goal of TeamConnect is to solve information overload in team chats by combining real-time communication with AI-powered assistance.  
-AI is used only where it adds value—such as summarizing conversations and extracting important points—while the core messaging system remains fast, secure, and reliable.
+| Phase | Feature | Status |
+|-------|---------|--------|
+| ✅ | Multi-workspace backend with RBAC | Complete |
+| ✅ | JWT auth with rotating refresh tokens | Complete |
+| ✅ | Private and group conversations | Complete |
+| ✅ | Message persistence and retrieval | Complete |
+| ✅ | Online/offline presence tracking | Complete |
+| ✅ | Standardized API response format | Complete |
+| 🔲 | WebSocket real-time messaging | Planned |
+| 🔲 | Typing indicators and read receipts | Planned |
+| 🔲 | AI conversation summarization | Planned |
+| 🔲 | AI action item extraction | Planned |
 
 ---
 
-## 📌 Status
-
-🚧 This project is currently under active development.
-
----
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
