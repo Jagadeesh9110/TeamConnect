@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from "./routes/auth.routes.js";
 import conversationRoutes from "./routes/conversation.routes.js";
 import messageRoutes from "./routes/message.routes.js";
+import workspaceRoutes from "./routes/workspace.routes.js";
 
 const app = express();
  
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/workspaces", workspaceRoutes);
 
 app.get("/health", (_, res) => {
     res.status(200).json({ status: "OK", service: "TeamConnect Backend" });
