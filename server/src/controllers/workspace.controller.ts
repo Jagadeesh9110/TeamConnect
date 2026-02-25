@@ -308,7 +308,7 @@ export const removeMemberFromWorkspace = async (req: AuthenticatedRequest, res: 
     try {
         const currentUserId = req.user?.userId;
         const workspaceId = req.params.workspaceId;
-        const { targetUserId } = req.body;
+        const targetUserId = req.params.userId;
 
         if (!currentUserId) {
             return res.status(401).json({
@@ -324,10 +324,10 @@ export const removeMemberFromWorkspace = async (req: AuthenticatedRequest, res: 
             });
         }
 
-        if (!targetUserId) {
+        if (!targetUserId || typeof targetUserId !== "string") {
             return res.status(400).json({
                 success: false,
-                error: "targetUserId is required to remove member from workspace"
+                error: "Target User ID is required to remove member from workspace"
             });
         }
 

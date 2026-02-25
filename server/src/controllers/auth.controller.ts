@@ -194,6 +194,8 @@ export const loginUser = async (req: Request, res: Response) => {
       where: { id: user.id },
       data: {
         refreshTokenHash: hashToken(refreshToken),
+        isOnline: true,
+        lastSeenAt: new Date(),
       },
     });
 
@@ -223,7 +225,11 @@ export const logoutUser = async (req: AuthenticatedRequest, res: Response) => {
   if (req.user?.userId) {
     await prisma.user.update({
       where: { id: req.user.userId },
-      data: { refreshTokenHash: null },
+      data: {
+        refreshTokenHash: null,
+        isOnline: false,
+        lastSeenAt: new Date(),
+      },
     });
   }
 
