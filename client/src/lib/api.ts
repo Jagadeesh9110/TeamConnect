@@ -109,9 +109,19 @@ export const createPrivateConversation = async (
     workspaceId,
     participantId,
   });
-
-  return res.data.data; // { conversation, isNew, message }
+   // res.data.data -> { conversation, isNew, message }
+   return res.data.conversation; 
 };
+
+export const createGroupConversation= async (workspaceId: string, participantIds: string[], title: string) => {
+   const res=await apiClient.post("/api/conversations/group",{
+    workspaceId,
+    participantIds,
+    title
+   });
+   // res.data.data -> { conversation, isNew, message }
+   return res.data.conversation; 
+}
 
 export const getUserConversations = async (workspaceId: string) => {
   const res = await apiClient.get("/api/conversations", {

@@ -169,6 +169,72 @@ export const getWorkspaceDetails = async (req: AuthenticatedRequest, res: Respon
     }
 }
 
+export const getWorkspaceMembers =async (req:AuthenticatedRequest,res:Response)=>{
+     try{
+        const currnetUserId=req.user?.userId;
+        const workspaceId=req.params.workspaceId;
+        if(!currnetUserId){
+            return res.status(401).json({
+                success:false,
+                error:"Unauthorized"
+            });
+        }
+        if(!workspaceId || typeof workspaceId!=="string"){
+            return res.status(400).json({
+                success:false,
+                error:"A Single Workspace ID is required"
+            });
+        }
+        // Check if the user is a member of the workspace
+        const userMembership=await prisma.workspaceMember.findUnique({
+            where:{
+                workspaceId_userId:{
+                    workspaceId,
+                    userId:currnetUserId
+                }
+            },
+            include:{
+                workspace:{
+                    include:{
+                        members:{
+                            include:{
+                                user:true
+                            }
+                        }
+                    }
+                }            }
+        });
+        if(!userMembership){
+            return res.status(403).json({
+                success:false,
+                error:"You are not a member of this workspace"
+            });
+        } 
+        
+        const members=userMembership.workspace.members.map(m=>{
+            return {
+                id:m.user.id,
+                name:m.user.fullName,
+                email:m.user.email,
+                role:m.role
+            }
+        });
+
+        return res.status(200).json({
+            success:true,
+            data:{
+                members:members
+            }
+        })
+        
+     }catch(err){
+        res.status(500).json({
+            success:false,
+            error:"Failed to retrieve workspace members"
+        })
+     }
+}
+
 // Add member to the workspace
 export const addMemberToWorkspace = async (req: AuthenticatedRequest, res: Response) => {
     try {
