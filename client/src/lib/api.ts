@@ -72,6 +72,11 @@ export const getWorkspaceDetails = async (workspaceId: string) => {
   return res.data.data.workspace;
 };
 
+export const getWorkspaceMembers = async (workspaceId: string) =>{
+  const res=await apiClient.get(`/api/workspaces/${workspaceId}/members`);
+  return res.data.data.members;//  {id :string, name: string, email: string,role: string}
+}
+
 export const addMemberToWorkspace = async (
   workspaceId: string,
   participantIds: string[]

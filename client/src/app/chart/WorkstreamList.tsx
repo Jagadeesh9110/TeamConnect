@@ -16,6 +16,7 @@ import { Plus, Filter, LogOut } from "lucide-react";
 import { logoutUser } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 import type { WorkspaceMemberResponse } from "../../types/workspace";
+import {CreateConversationModal} from "./CreateConversationModal";
 
 interface WorkstreamListProps {
   activeConversation: Conversation | null;
@@ -30,7 +31,7 @@ export default function WorkstreamList({
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
 
-  /* ---------------- Workspace State ---------------- */
+  // workspace state
   const [workspaces, setWorkspaces] = useState<WorkspaceMemberResponse[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [workspaceDetails, setWorkspaceDetails] = useState<any>(null);
@@ -45,6 +46,7 @@ export default function WorkstreamList({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [conversationError, setConversationError] = useState("");
+  const [conversationModalOpen, setConversationModalOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -206,7 +208,10 @@ export default function WorkstreamList({
           <span className="text-[11px] text-slate-400 uppercase">
             Workstreams
           </span>
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <button onClick={() => setConversationModalOpen(true)}>
+             <Plus className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+          {/* <Filter className="w-3.5 h-3.5 text-slate-400" /> */}
         </div>
 
         {loadingConversations && (
@@ -240,6 +245,17 @@ export default function WorkstreamList({
             </button>
           );
         })}
+
+        {conversationModalOpen && activeWorkspaceId  && (
+          <CreateConversationModal
+            workspaceId={activeWorkspaceId}
+            onClose={() => setConversationModalOpen(false)}
+            onConversationCreated={(conv) => {
+              setConversations((prev) => [conv, ...prev]);
+              onSelectConversation(conv);
+            }}
+          />
+        )}
 
         {!loadingConversations && conversations.length === 0 && (
           <p className="text-xs text-slate-500 px-1">
