@@ -26,7 +26,7 @@ export default function RegisterPage() {
         setError("");
         try {
            const response = await registerUser(name, email, password);
-           console.log("Registration successful:", response.data.message);
+           console.log("Registration successful:", response.message);
 
             navigate("/login");
             

@@ -25,7 +25,7 @@ export default function LoginPage() {
             const response = await loginUser(email, password);
             
             // Update Zustand store with user data
-            setAuth(response.data.user, response.accessToken);
+            setAuth(response.user, response.accessToken);
             navigate("/app");
             
         } catch (err: any) {

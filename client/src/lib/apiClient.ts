@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
 
       try {
         const res = await apiClient.post("/api/auth/refresh");
-        const newAccessToken = res.data.accessToken;
+        const newAccessToken = res.data.data.accessToken;
 
         useAuthStore.setState({ accessToken: newAccessToken });
 
