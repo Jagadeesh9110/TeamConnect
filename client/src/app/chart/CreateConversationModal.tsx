@@ -66,22 +66,23 @@ export const CreateConversationModal = ({workspaceId,onClose,onConversationCreat
             setLoading(true);
             setError("");
 
-            let conversation: Conversation;
+            let response;
 
             if (selectedUserIds.length === 1) {
-                conversation = await createPrivateConversation(
-                    workspaceId,
-                    selectedUserIds[0]
-                );
+              response = await createPrivateConversation(
+                workspaceId,
+                selectedUserIds[0]
+              );
             } else {
-                conversation = await createGroupConversation(
-                    workspaceId,
-                    selectedUserIds,
-                    title.trim()
-                );
+              response = await createGroupConversation(
+                workspaceId,
+                selectedUserIds,
+                title.trim()
+             );
             }
 
-            onConversationCreated(conversation);
+            onConversationCreated(response.conversation);
+            
             onClose();
         } catch (err: any) {
             setError(

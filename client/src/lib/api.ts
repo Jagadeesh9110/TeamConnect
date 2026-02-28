@@ -1,5 +1,6 @@
 import { apiClient } from "./apiClient";
 import { type AxiosResponse } from "axios";
+import { type Conversation } from "../types/conversation";
 
 type ApiSuccess<T> = {
   success: true;
@@ -110,20 +111,28 @@ export const deleteWorkspace = async (workspaceId: string) => {
 export const createPrivateConversation = async (
   workspaceId: string,
   participantId: string
-) => {
+): Promise<{
+  conversation: Conversation;
+  isNew: boolean;
+  message: string;
+}> => {
   const res = await apiClient.post("/api/conversations/private", {
     workspaceId,
     participantId,
   });
 
-  return extractData(res); // returns { conversation, isNew, message }
+  return extractData(res);// { conversation, isNew, message }
 };
 
 export const createGroupConversation = async (
   workspaceId: string,
   participantIds: string[],
   title: string
-) => {
+): Promise<{
+  conversation: Conversation;
+  isNew: boolean;
+  message: string;
+}> => {
   const res = await apiClient.post("/api/conversations/group", {
     workspaceId,
     participantIds,
