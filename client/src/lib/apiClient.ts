@@ -6,8 +6,7 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-
-// request interceptor to add access token to headers
+// REQUEST INTERCEPTOR
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
 
@@ -19,14 +18,14 @@ apiClient.interceptors.request.use((config) => {
 });
 
 
-// response interceptor to handle 401 errors and token refresh
+// RESPONSE INTERCEPTOR
 apiClient.interceptors.response.use(
   (response) => response,
 
   async (error) => {
     const originalRequest = error.config;
 
-    // 🚨 If refresh itself failed → STOP
+    // If refresh fails → logout
     if (originalRequest?.url?.includes("/api/auth/refresh")) {
       useAuthStore.getState().clearAuth();
       return Promise.reject(error);
@@ -36,12 +35,18 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const res = await apiClient.post("/api/auth/refresh");
+        const res = await axios.post(
+          "/api/auth/refresh",
+          {},
+          { baseURL: apiClient.defaults.baseURL, withCredentials: true }
+        );
+
         const newAccessToken = res.data.data.accessToken;
 
         useAuthStore.setState({ accessToken: newAccessToken });
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
         return apiClient(originalRequest);
       } catch (err) {
         useAuthStore.getState().clearAuth();

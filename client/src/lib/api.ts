@@ -1,30 +1,25 @@
 import { apiClient } from "./apiClient";
+import { type AxiosResponse } from "axios";
 
-/**
- * ======================================
- * API RESPONSE CONTRACT
- * ======================================
- * All backend responses follow:
- *
- * Success:
- * {
- *   success: true,
- *   data: T
- * }
- *
- * Error:
- * {
- *   success: false,
- *   error: string
- * }
- *
- * This file always returns `res.data.data`
- * so UI components receive only business payload (T).
- */
+type ApiSuccess<T> = {
+  success: true;
+  data: T;
+};
+
+type ApiError = {
+  success: false;
+  error: string;
+};
 
 
-// authentication
+function extractData<T>(res: AxiosResponse<ApiSuccess<T> | ApiError>): T {
+  if (!res.data.success) {
+    throw new Error(res.data.error);
+  }
+  return res.data.data;
+}
 
+// Auth
 export const registerUser = async (
   name: string,
   email: string,
@@ -36,46 +31,52 @@ export const registerUser = async (
     password,
   });
 
-  return res.data.data; // { message, user }
+  return extractData(res);
 };
 
 export const loginUser = async (email: string, password: string) => {
   const res = await apiClient.post("/api/auth/login", { email, password });
-  return res.data.data; // { accessToken, user }
+  return extractData(res);
 };
 
 export const logoutUser = async () => {
   const res = await apiClient.post("/api/auth/logout");
-  return res.data.data; // { message }
+  return extractData(res);
 };
 
 export const getMe = async () => {
   const res = await apiClient.get("/api/auth/me");
-  return res.data.data.user;
+  const data = extractData<{ user: any }>(res);
+  return data.user;
 };
 
 
 // workspaces
-
 export const createWorkspace = async (name: string) => {
   const res = await apiClient.post("/api/workspaces", { name });
-  return res.data.data.workspace;
+  const data = extractData<{ workspace: any }>(res);
+  return data.workspace;
 };
 
 export const getUserWorkspaces = async () => {
   const res = await apiClient.get("/api/workspaces");
-  return res.data.data.workspaces;
+  const data = extractData<{ workspaces: any[] }>(res);
+  return data.workspaces;
 };
 
 export const getWorkspaceDetails = async (workspaceId: string) => {
   const res = await apiClient.get(`/api/workspaces/${workspaceId}`);
-  return res.data.data.workspace;
+  const data = extractData<{ workspace: any }>(res);
+  return data.workspace;
 };
 
-export const getWorkspaceMembers = async (workspaceId: string) =>{
-  const res=await apiClient.get(`/api/workspaces/${workspaceId}/members`);
-  return res.data.data.members;//  {id :string, name: string, email: string,role: string}
-}
+export const getWorkspaceMembers = async (workspaceId: string) => {
+  const res = await apiClient.get(
+    `/api/workspaces/${workspaceId}/members`
+  );
+  const data = extractData<{ members: any[] }>(res);
+  return data.members;
+};
 
 export const addMemberToWorkspace = async (
   workspaceId: string,
@@ -85,7 +86,8 @@ export const addMemberToWorkspace = async (
     `/api/workspaces/${workspaceId}/members`,
     { participantIds }
   );
-  return res.data.data.message;
+
+  return extractData(res);
 };
 
 export const removeMemberFromWorkspace = async (
@@ -95,17 +97,16 @@ export const removeMemberFromWorkspace = async (
   const res = await apiClient.delete(
     `/api/workspaces/${workspaceId}/members/${userId}`
   );
-  return res.data.data.message;
+
+  return extractData(res);
 };
 
 export const deleteWorkspace = async (workspaceId: string) => {
   const res = await apiClient.delete(`/api/workspaces/${workspaceId}`);
-  return res.data.data.message;
+  return extractData(res);
 };
 
-
 // conversations
-
 export const createPrivateConversation = async (
   workspaceId: string,
   participantId: string
@@ -114,31 +115,34 @@ export const createPrivateConversation = async (
     workspaceId,
     participantId,
   });
-   // res.data.data -> { conversation, isNew, message }
-   return res.data.conversation; 
+
+  return extractData(res); // returns { conversation, isNew, message }
 };
 
-export const createGroupConversation= async (workspaceId: string, participantIds: string[], title: string) => {
-   const res=await apiClient.post("/api/conversations/group",{
+export const createGroupConversation = async (
+  workspaceId: string,
+  participantIds: string[],
+  title: string
+) => {
+  const res = await apiClient.post("/api/conversations/group", {
     workspaceId,
     participantIds,
-    title
-   });
-   // res.data.data -> { conversation, isNew, message }
-   return res.data.conversation; 
-}
+    title,
+  });
+
+  return extractData(res);
+};
 
 export const getUserConversations = async (workspaceId: string) => {
   const res = await apiClient.get("/api/conversations", {
     params: { workspaceId },
   });
 
-  return res.data.data.conversations;
+  const data = extractData<{ conversations: any[] }>(res);
+  return data.conversations;
 };
 
-
-// messages 
-
+// messages
 export const sendMessage = async (
   conversationId: string,
   content: string
@@ -148,7 +152,7 @@ export const sendMessage = async (
     content,
   });
 
-  return res.data.data.message;
+  return extractData(res);
 };
 
 export const getMessagesForConversation = async (
@@ -158,5 +162,6 @@ export const getMessagesForConversation = async (
     `/api/messages/${conversationId}/messages`
   );
 
-  return res.data.data.messages;
+  const data = extractData<{ messages: any[] }>(res);
+  return data.messages;
 };

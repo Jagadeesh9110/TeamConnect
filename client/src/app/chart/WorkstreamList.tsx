@@ -230,7 +230,7 @@ export default function WorkstreamList({
               ? "Group Discussion"
               : conv.participants.map((p) => p.user.fullName).join(", ");
 
-          return (
+          return (+
             <button
               key={conv.id}
               onClick={() => onSelectConversation(conv)}
