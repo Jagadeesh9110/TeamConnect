@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { sendMessage } from "../../lib/api";
+import { useAuthStore } from "../../store/authStore";
+import { type Message } from "../../types/conversation";
 import {
     Bold,
     Italic,
@@ -11,23 +13,47 @@ import {
 
 interface MessageComposerProps {
     conversationId: string | null;
+    onMessageSent?: (message: Message) => void;
 }
 
 export default function MessageComposer({
     conversationId,
+    onMessageSent,
 }: MessageComposerProps) {
+    const currentUser = useAuthStore((s) => s.user);
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
 
     const handleSend = async () => {
-        if (!conversationId || !content.trim()) return;
+        if (!conversationId || !content.trim() || !currentUser) return;
+
+        const text = content.trim();
+
+        // Optimistic message — append immediately
+        const optimisticMsg: Message = {
+            id: `optimistic-${Date.now()}`,
+            content: text,
+            createdAt: new Date().toISOString(),
+            sender: {
+                id: currentUser.id,
+                fullName: currentUser.fullName,
+                email: currentUser.email,
+            },
+        };
+        onMessageSent?.(optimisticMsg);
+        setContent("");
 
         setSending(true);
         try {
-            await sendMessage(conversationId, content.trim());
-            setContent("");
+            const result = await sendMessage(conversationId, text);
+            // Replace optimistic message with server response
+            // For now the optimistic one stays — server returns the real message
+            // but since IDs differ, both would appear. We handle this by just
+            // letting ChatLayout refetch or accepting the duplicate until sockets.
+            // A simple approach: the server message will have a real ID.
         } catch (err) {
             console.error("Failed to send message:", err);
+            // TODO: mark optimistic message as failed / remove it
         } finally {
             setSending(false);
         }

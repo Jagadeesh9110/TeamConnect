@@ -1,47 +1,30 @@
-import { useEffect, useState, useRef } from "react";
-import { getMessagesForConversation } from "../../lib/api";
+import { useState, useEffect, useRef } from "react";
 import { type Message } from "../../types/conversation";
+import { useAuthStore } from "../../store/authStore";
+import { editMessage as editMessageApi, deleteMessage as deleteMessageApi } from "../../lib/api";
+import { MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
 
 interface MessageTimelineProps {
   conversationId: string | null;
+  messages: Message[];
+  loading: boolean;
+  error: string;
+  onMessagesChanged?: (updater: (prev: Message[]) => Message[]) => void;
 }
 
 export default function MessageTimeline({
   conversationId,
+  messages,
+  loading,
+  error,
+  onMessagesChanged,
 }: MessageTimelineProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Load messages via REST
-  useEffect(() => {
-    if (!conversationId) {
-      setMessages([]);
-      setLoading(false);
-      return;
-    }
-
-    const loadMessages = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await getMessagesForConversation(conversationId);
-        setMessages(data);
-      } catch {
-        setError("Failed to load messages");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMessages();
-  }, [conversationId]);
 
   if (!conversationId) {
     return (
@@ -66,7 +49,11 @@ export default function MessageTimeline({
       )}
 
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble
+          key={msg.id}
+          message={msg}
+          onMessagesChanged={onMessagesChanged}
+        />
       ))}
 
       <div ref={bottomRef} />
@@ -74,8 +61,162 @@ export default function MessageTimeline({
   );
 }
 
-/* ── Single message ──────────────────────────────────────────────────── */
-function MessageBubble({ message }: { message: Message }) {
+/* ════════════════════════════════════════════════════════════════════════
+   ── Single Message Bubble
+   ════════════════════════════════════════════════════════════════════════ */
+
+function MessageBubble({
+  message,
+  onMessagesChanged,
+}: {
+  message: Message;
+  onMessagesChanged?: (updater: (prev: Message[]) => Message[]) => void;
+}) {
+  const currentUser = useAuthStore((s) => s.user);
+  const isSender = currentUser?.id === message.sender.id;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Auto-focus edit input
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      // Move cursor to end
+      const len = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(len, len);
+    }
+  }, [editing]);
+
+  /* ── Soft-deleted message ─────────────────────────────────────────── */
+  if (message.isDeleted) {
+    return (
+      <div className="flex gap-3 max-w-3xl w-full opacity-60">
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold text-white shrink-0 mt-0.5 bg-slate-700"
+        >
+          ✕
+        </div>
+        <div className="flex-1 min-w-0 py-2">
+          <p className="text-sm text-slate-500 italic">
+            🚫 This message was deleted
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Edit handlers ────────────────────────────────────────────────── */
+  const startEdit = () => {
+    setEditValue(message.content);
+    setEditing(true);
+    setMenuOpen(false);
+    setActionError("");
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setEditValue("");
+    setActionError("");
+  };
+
+  const saveEdit = async () => {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === message.content) {
+      cancelEdit();
+      return;
+    }
+
+    // Optimistic update
+    const prevContent = message.content;
+    const prevEditedAt = message.editedAt;
+    onMessagesChanged?.((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...m, content: trimmed, editedAt: new Date().toISOString() }
+          : m
+      )
+    );
+    setEditing(false);
+    setSaving(true);
+    setActionError("");
+
+    try {
+      const { message: updated } = await editMessageApi(message.id, trimmed);
+      // Sync with server (replace optimistic with real)
+      onMessagesChanged?.((prev) =>
+        prev.map((m) => (m.id === message.id ? updated : m))
+      );
+    } catch (err: any) {
+      // Revert
+      onMessagesChanged?.((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, content: prevContent, editedAt: prevEditedAt }
+            : m
+        )
+      );
+      setActionError(err?.response?.data?.error || "Failed to edit");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Delete handler ───────────────────────────────────────────────── */
+  const handleDelete = async () => {
+    setMenuOpen(false);
+    setActionError("");
+
+    // Optimistic
+    onMessagesChanged?.((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...m, isDeleted: true, deletedAt: new Date().toISOString() }
+          : m
+      )
+    );
+
+    try {
+      await deleteMessageApi(message.id);
+    } catch (err: any) {
+      // Revert
+      onMessagesChanged?.((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, isDeleted: false, deletedAt: null }
+            : m
+        )
+      );
+      setActionError(err?.response?.data?.error || "Failed to delete");
+    }
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === "Escape") {
+      cancelEdit();
+    }
+  };
+
+  /* ── Normal render ────────────────────────────────────────────────── */
   const initials = message.sender.fullName
     .split(" ")
     .map((w) => w[0])
@@ -83,7 +224,6 @@ function MessageBubble({ message }: { message: Message }) {
     .toUpperCase()
     .slice(0, 2);
 
-  // Stable avatar colour based on sender id
   const hue = hashToHue(message.sender.id);
 
   const time = new Date(message.createdAt).toLocaleTimeString([], {
@@ -91,8 +231,10 @@ function MessageBubble({ message }: { message: Message }) {
     minute: "2-digit",
   });
 
+  const isEdited = !!message.editedAt;
+
   return (
-    <div className="flex gap-3 max-w-3xl w-full">
+    <div className="flex gap-3 max-w-3xl w-full group/msg relative">
       {/* Avatar */}
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold text-white shrink-0 mt-0.5"
@@ -107,28 +249,98 @@ function MessageBubble({ message }: { message: Message }) {
             {message.sender.fullName}
           </span>
           <span className="text-[11px] text-slate-500">{time}</span>
+          {isEdited && (
+            <span className="text-[10px] text-slate-500 italic">(edited)</span>
+          )}
+          {saving && (
+            <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
+          )}
         </p>
 
-        {/* Content — detect simple code blocks */}
-        <div className="text-sm leading-relaxed text-slate-300">
-          <RenderContent content={message.content} />
-        </div>
+        {/* Content or edit input */}
+        {editing ? (
+          <div className="mt-1">
+            <textarea
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              rows={2}
+              className="w-full text-sm text-white bg-slate-800/80 border border-blue-500/50 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition-colors resize-none"
+            />
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={saveEdit}
+                className="text-[10px] px-2.5 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="text-[10px] px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <span className="text-[10px] text-slate-500">
+                Enter to save · Esc to cancel
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm leading-relaxed text-slate-300">
+            <RenderContent content={message.content} />
+          </div>
+        )}
+
+        {/* Error */}
+        {actionError && (
+          <p className="text-[10px] text-red-400 mt-1">{actionError}</p>
+        )}
       </div>
+
+      {/* ⋯ hover menu — sender only */}
+      {isSender && !editing && (
+        <div className="absolute right-0 top-0" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="opacity-0 group-hover/msg:opacity-100 text-slate-500 hover:text-slate-300 transition-all p-1 rounded-md hover:bg-white/10"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 w-36 bg-[#0e1829] border border-white/10 rounded-lg shadow-xl overflow-hidden z-50">
+              <button
+                onClick={startEdit}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ── Render content with simple ```code``` detection ─────────────────── */
 function RenderContent({ content }: { content: string }) {
-  // Split on triple-backtick fencing
   const parts = content.split(/(```[\s\S]*?```)/g);
 
   return (
     <>
       {parts.map((part, i) => {
         if (part.startsWith("```") && part.endsWith("```")) {
-          // Strip the fences
-          const code = part.slice(3, -3).replace(/^\w*\n/, ""); // strip optional lang hint on first line
+          const code = part.slice(3, -3).replace(/^\w*\n/, "");
           return (
             <pre
               key={i}
@@ -138,7 +350,6 @@ function RenderContent({ content }: { content: string }) {
             </pre>
           );
         }
-        // Render plain text, preserving bullet points
         return part.split("\n").map((line, j) => (
           <span key={`${i}-${j}`}>
             {line}

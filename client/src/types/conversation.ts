@@ -31,6 +31,9 @@ export interface Message {
   content: string;
   createdAt: string;
   sender: UserPublic;
+  editedAt?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 // Display-only status — derived on the client, never persisted

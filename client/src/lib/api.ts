@@ -1,6 +1,6 @@
 import { apiClient } from "./apiClient";
 import { type AxiosResponse } from "axios";
-import { type Conversation } from "../types/conversation";
+import { type Conversation, type Message } from "../types/conversation";
 
 type ApiSuccess<T> = {
   success: true;
@@ -186,4 +186,23 @@ export const getMessagesForConversation = async (
 
   const data = extractData<{ messages: any[] }>(res);
   return data.messages;
+};
+
+// message edit
+export const editMessage = async (
+  messageId: string,
+  content: string
+) => {
+  const res = await apiClient.patch(`/api/messages/${messageId}`, {
+    content,
+  });
+
+  return extractData<{ message: Message }>(res);
+};
+
+// message soft delete
+export const deleteMessage = async (messageId: string) => {
+  const res = await apiClient.delete(`/api/messages/${messageId}`);
+
+  return extractData<{ message: Message }>(res);
 };

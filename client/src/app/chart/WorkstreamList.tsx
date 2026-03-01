@@ -32,6 +32,10 @@ export default function WorkstreamList({
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
 
+  // localStorage keys
+  const LS_WORKSPACE = "tc_activeWorkspaceId";
+  const LS_CONVERSATION = "tc_activeConversationId";
+
   // workspace state
   const [workspaces, setWorkspaces] = useState<WorkspaceMemberResponse[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
@@ -60,9 +64,18 @@ export default function WorkstreamList({
         setWorkspaces(data);
 
         if (data.length > 0) {
-          setActiveWorkspaceId(data[0].workspace.id);
-          // Resolve ownership from the first workspace
-          const members = data[0].workspace.members ?? [];
+          // Restore saved workspace or fallback to first
+          const savedId = localStorage.getItem(LS_WORKSPACE);
+          const match = savedId
+            ? data.find((wm) => wm.workspace.id === savedId)
+            : null;
+          const target = match ?? data[0];
+
+          setActiveWorkspaceId(target.workspace.id);
+          localStorage.setItem(LS_WORKSPACE, target.workspace.id);
+
+          // Resolve ownership
+          const members = target.workspace.members ?? [];
           const ownership = members.some(
             (m: any) => m.userId === user?.id && m.role === "OWNER"
           );
@@ -81,6 +94,9 @@ export default function WorkstreamList({
   useEffect(() => {
     if (!activeWorkspaceId) return;
 
+    // Persist workspace selection
+    localStorage.setItem(LS_WORKSPACE, activeWorkspaceId);
+
     const load = async () => {
       setLoadingConversations(true);
       setConversationError("");
@@ -88,6 +104,19 @@ export default function WorkstreamList({
       try {
         const data = await getUserConversations(activeWorkspaceId);
         setConversations(data);
+
+        // Auto-select: restore saved conversation or pick first (most recent)
+        if (data.length > 0) {
+          const savedConvId = localStorage.getItem(LS_CONVERSATION);
+          const match = savedConvId
+            ? data.find((c: Conversation) => c.id === savedConvId)
+            : null;
+          const target = match ?? data[0];
+          onSelectConversation(target);
+          localStorage.setItem(LS_CONVERSATION, target.id);
+        } else {
+          onSelectConversation(null);
+        }
       } catch {
         setConversationError("Failed to load conversations");
       } finally {
@@ -286,7 +315,10 @@ export default function WorkstreamList({
           return (
             <button
               key={conv.id}
-              onClick={() => onSelectConversation(conv)}
+              onClick={() => {
+                onSelectConversation(conv);
+                localStorage.setItem(LS_CONVERSATION, conv.id);
+              }}
               className={`w-full text-left px-2 py-2 rounded-md ${isActive ? "bg-white/10" : "hover:bg-white/5"
                 }`}
             >
