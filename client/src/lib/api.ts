@@ -151,6 +151,19 @@ export const getUserConversations = async (workspaceId: string) => {
   return data.conversations;
 };
 
+// conversation title update
+export const updateConversationTitle = async (
+  conversationId: string,
+  title: string
+): Promise<{ conversation: Conversation }> => {
+  const res = await apiClient.patch(
+    `/api/conversations/${conversationId}/title`,
+    { title }
+  );
+
+  return extractData(res);
+};
+
 // messages
 export const sendMessage = async (
   conversationId: string,

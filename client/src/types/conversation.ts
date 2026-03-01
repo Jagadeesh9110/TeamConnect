@@ -19,6 +19,7 @@ export interface LastMessage {
 export interface Conversation {
   id: string;
   type: "PRIVATE" | "GROUP";
+  title?: string | null;
   participants: Participant[];
   messages?: LastMessage[];
   _count?: { messages: number };

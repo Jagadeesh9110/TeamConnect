@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../config/prisma.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { ConversationScalarFieldEnum } from '../generated/prisma/internal/prismaNamespace.js';
 
 
 // Reusable user select object (DRY principle)
@@ -458,4 +459,112 @@ export async function getUserConversations(req: AuthenticatedRequest, res: Respo
 
     }
 
+}
+
+// update conversation title
+export const udpateConversationTitle = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { conversationId } = req.params;
+        const { title } = req.body;
+
+        if (!currentUserId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized"
+            })
+        }
+
+        if (!conversationId || typeof conversationId !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: "conversationId is required"
+            })
+        }
+
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: "title is required"
+            })
+        }
+
+        // check conversation exists
+        const conversation = await prisma.conversation.findUnique({
+            where: {
+                id: conversationId
+            },
+            include: {
+                workspace: true,
+            }
+
+        })
+
+        if (!conversation) {
+            return res.status(404).json({
+                success: false,
+                error: "Conversation not founf"
+            })
+        }
+
+        // check if use is a member of the workspace
+        const membership = await prisma.workspaceMember.findUnique({
+            where: {
+                workspaceId_userId: {
+                    workspaceId: conversation.workspaceId,
+                    userId: currentUserId
+                }
+            }
+        })
+
+        if (!membership) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not a member of this workspace"
+            })
+        }
+
+        // check user is owner or not 
+        if (membership.role !== "OWNER") {
+            return res.status(403).json({
+                success: false,
+                error: "Only Owner can update conversation title"
+            })
+        }
+
+        // udpate conversation title
+        const updatedConversation = await prisma.conversation.update({
+            where: {
+                id: conversationId
+            },
+            data: {
+                title: title.trim()
+            },
+            include: {
+                participants: {
+                    include: {
+                        user: {
+                            select: userPublicSelect
+                        }
+                    }
+                }
+            }
+        })
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                conversation: updatedConversation
+            }
+        });
+
+
+    } catch (error) {
+        console.error("Update Conversation Title Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to update conversation title"
+        });
+    }
 }

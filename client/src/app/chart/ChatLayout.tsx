@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import WorkstreamList from "./WorkstreamList";
 import ConversationHeader from "./ConversationHeader";
 import MessageTimeline from "./MessageTimeline";
@@ -10,8 +10,16 @@ export default function ChatLayout() {
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
 
+  // Track whether current user is workspace owner (set by WorkstreamList)
+  const [isWorkspaceOwner, setIsWorkspaceOwner] = useState(false);
+
   // Knowledge Hub: default (35%) or expanded (45%)
   const [hubExpanded, setHubExpanded] = useState(false);
+
+  /** Called by ConversationHeader after title edit (optimistic or confirmed) */
+  const handleConversationUpdated = useCallback((updated: Conversation) => {
+    setActiveConversation(updated);
+  }, []);
 
   return (
     <div className="h-screen w-full bg-[#0b1220] text-white flex overflow-hidden">
@@ -19,6 +27,7 @@ export default function ChatLayout() {
       <WorkstreamList
         activeConversation={activeConversation}
         onSelectConversation={setActiveConversation}
+        onOwnershipResolved={setIsWorkspaceOwner}
       />
 
       {/* ─ Content area ─────────────────────────────────────────── */}
@@ -28,7 +37,11 @@ export default function ChatLayout() {
           className="flex flex-col min-w-0 transition-all duration-300 ease-in-out"
           style={{ width: hubExpanded ? "55%" : "65%" }}
         >
-          <ConversationHeader conversation={activeConversation} />
+          <ConversationHeader
+            conversation={activeConversation}
+            onConversationUpdated={handleConversationUpdated}
+            isOwner={isWorkspaceOwner}
+          />
           <MessageTimeline conversationId={activeConversation?.id || null} />
           <MessageComposer conversationId={activeConversation?.id || null} />
         </div>
@@ -42,3 +55,4 @@ export default function ChatLayout() {
     </div>
   );
 }
+
