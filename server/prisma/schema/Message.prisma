@@ -17,6 +17,10 @@ model Message {
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
   
   createdAt DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+
+  editedAt DateTime? @db.Timestamptz(3) @map("edited_at")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt DateTime? @db.Timestamptz(3) @map("deleted_at")
   
   @@map("messages")
 }
