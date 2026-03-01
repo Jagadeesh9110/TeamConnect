@@ -183,11 +183,17 @@ function MessageBubble({
     setMenuOpen(false);
     setActionError("");
 
-    // Optimistic
+    // Confirmation before destructive action
+    if (!confirm("Delete this message? This cannot be undone.")) return;
+
+    // Save original for revert
+    const prevContent = message.content;
+
+    // Optimistic — clear content for cleaner state
     onMessagesChanged?.((prev) =>
       prev.map((m) =>
         m.id === message.id
-          ? { ...m, isDeleted: true, deletedAt: new Date().toISOString() }
+          ? { ...m, isDeleted: true, deletedAt: new Date().toISOString(), content: "" }
           : m
       )
     );
@@ -199,7 +205,7 @@ function MessageBubble({
       onMessagesChanged?.((prev) =>
         prev.map((m) =>
           m.id === message.id
-            ? { ...m, isDeleted: false, deletedAt: null }
+            ? { ...m, isDeleted: false, deletedAt: null, content: prevContent }
             : m
         )
       );
@@ -350,10 +356,11 @@ function RenderContent({ content }: { content: string }) {
             </pre>
           );
         }
-        return part.split("\n").map((line, j) => (
+        const lines = part.split("\n");
+        return lines.map((line, j) => (
           <span key={`${i}-${j}`}>
             {line}
-            {j < part.split("\n").length - 1 && <br />}
+            {j < lines.length - 1 && <br />}
           </span>
         ));
       })}
