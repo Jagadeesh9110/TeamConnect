@@ -11,6 +11,7 @@ model Workspace {
 
   members       WorkspaceMember[]
   conversations Conversation[]
+  invites       WorkspaceInvite[]
 
   @@map("workspaces")
 }

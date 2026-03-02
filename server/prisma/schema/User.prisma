@@ -25,6 +25,7 @@ model User {
 
   createdWorkspaces    Workspace[] @relation("CreatedWorkspaces")
   workspaceMemberships WorkspaceMember[]
+  sentInvites          WorkspaceInvite[] @relation("SentInvites")
 
   @@map("users") // This renames the table from 'User' to 'users' in Postgres
 }

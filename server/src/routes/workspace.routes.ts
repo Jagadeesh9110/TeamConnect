@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { createWorkspace, getUserWorkspaces,getWorkspaceDetails,addMemberToWorkspace,removeMemberFromWorkspace,deleteWorkspace, getWorkspaceMembers } from "../controllers/workspace.controller.js";
+import { createWorkspace, getUserWorkspaces, getWorkspaceDetails, inviteMemberByEmail, removeMemberFromWorkspace, deleteWorkspace, getWorkspaceMembers } from "../controllers/workspace.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
-const router= Router();
+const router = Router();
 
 // Create a new workspace
 router.post("/", authMiddleware, createWorkspace);
@@ -16,8 +16,8 @@ router.get("/:workspaceId", authMiddleware, getWorkspaceDetails);
 // get workspace members
 router.get("/:workspaceId/members", authMiddleware, getWorkspaceMembers);
 
-// Add a member to the workspace
-router.post("/:workspaceId/members", authMiddleware, addMemberToWorkspace);
+// Invite member by email
+router.post("/:workspaceId/invite", authMiddleware, inviteMemberByEmail);
 
 // Remove a member from the workspace
 router.delete("/:workspaceId/members/:userId", authMiddleware, removeMemberFromWorkspace);

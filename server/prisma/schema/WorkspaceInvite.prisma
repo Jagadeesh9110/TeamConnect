@@ -1,0 +1,21 @@
+model WorkspaceInvite {
+  id          String    @id @default(cuid()) @map("invite_id")
+  email       String    @db.VarChar(255)
+  workspaceId String    @map("workspace_id")
+  invitedById String    @map("invited_by_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @db.Timestamptz(3) @map("expires_at")
+  accepted    Boolean   @default(false)
+  acceptedAt  DateTime? @db.Timestamptz(3) @map("accepted_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation("SentInvites", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3) @map("created_at")
+
+  @@index([email])
+  @@index([workspaceId])
+  @@index([email, accepted])
+
+  @@map("workspace_invites")
+}
