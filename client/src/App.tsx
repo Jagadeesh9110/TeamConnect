@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./app/pages/Login";
 import RegisterPage from "./app/pages/Register";
 import VerifyEmailPage from "./app/pages/VerifyEmail";
+import AcceptInvitePage from "./app/pages/AcceptInvite";
 import LandingPage from "./app/pages/LandingPage";
 import ProtectedRoute from "./app/pages/ProtectedRoute";
 import ChatLayout from "./app/chart/ChatLayout";
@@ -15,6 +16,7 @@ function AppRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
             <Route
                 path="/app"
                 element={

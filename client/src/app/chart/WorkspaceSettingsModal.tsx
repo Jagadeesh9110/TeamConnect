@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
     getWorkspaceDetails,
     getWorkspaceMembers,
-    addMemberToWorkspace,
+    inviteByEmail,
     removeMemberFromWorkspace,
     deleteWorkspace,
 } from "../../lib/api";
@@ -348,19 +348,16 @@ function InviteTab({
     workspaceId: string;
     onRefresh: () => Promise<void>;
 }) {
-    const [input, setInput] = useState("");
+    const [email, setEmail] = useState("");
     const [inviting, setInviting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
     const handleInvite = async () => {
-        const ids = input
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
+        const trimmed = email.trim().toLowerCase();
 
-        if (ids.length === 0) {
-            setError("Enter at least one user ID");
+        if (!trimmed || !trimmed.includes("@")) {
+            setError("Enter a valid email address");
             return;
         }
 
@@ -369,13 +366,18 @@ function InviteTab({
         setSuccess("");
 
         try {
-            await addMemberToWorkspace(workspaceId, ids);
-            setSuccess(`Successfully invited ${ids.length} member${ids.length > 1 ? "s" : ""}`);
-            setInput("");
-            await onRefresh();
+            const result = await inviteByEmail(workspaceId, trimmed);
+
+            if (result.type === "added") {
+                setSuccess(`✅ ${result.message}`);
+                await onRefresh();
+            } else {
+                setSuccess(`📧 ${result.message}`);
+            }
+            setEmail("");
         } catch (err: any) {
             setError(
-                err?.response?.data?.error || "Failed to invite members"
+                err?.response?.data?.error || err.message || "Failed to send invite"
             );
         } finally {
             setInviting(false);
@@ -385,31 +387,34 @@ function InviteTab({
     return (
         <div>
             <p className="text-xs text-slate-400 mb-1">
-                Add members by their user IDs (comma-separated)
+                Invite by email address
             </p>
             <p className="text-[10px] text-slate-500 mb-4">
-                Only workspace owners can invite new members.
+                If the user already has an account, they'll be added immediately.
+                Otherwise, they'll receive an invite link.
             </p>
 
-            <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="e.g. user-id-1, user-id-2"
-                rows={3}
-                className="w-full px-3 py-2 text-sm bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-            />
+            <div className="flex gap-2">
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !inviting && handleInvite()}
+                    placeholder="colleague@example.com"
+                    className="flex-1 px-3 py-2 text-sm bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+                <button
+                    onClick={handleInvite}
+                    disabled={inviting || !email.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors whitespace-nowrap"
+                >
+                    <UserPlus className="w-4 h-4" />
+                    {inviting ? "Sending…" : "Invite"}
+                </button>
+            </div>
 
             {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
             {success && <p className="text-xs text-emerald-400 mt-2">{success}</p>}
-
-            <button
-                onClick={handleInvite}
-                disabled={inviting || !input.trim()}
-                className="mt-3 flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-            >
-                <UserPlus className="w-4 h-4" />
-                {inviting ? "Inviting…" : "Invite Members"}
-            </button>
         </div>
     );
 }

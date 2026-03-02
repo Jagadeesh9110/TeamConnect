@@ -33,6 +33,19 @@ export default function LoginPage() {
 
             // Update Zustand store with user data
             setAuth(response.user, response.accessToken);
+
+            // Check for pending invite token (preserved across auth redirect)
+            const pendingInvite = localStorage.getItem("pendingInviteToken");
+            if (pendingInvite) {
+                try {
+                    const { token: inviteToken } = JSON.parse(pendingInvite);
+                    navigate(`/accept-invite?token=${inviteToken}`);
+                    return;
+                } catch {
+                    localStorage.removeItem("pendingInviteToken");
+                }
+            }
+
             navigate("/app");
         } catch (err: any) {
             console.error("Login failed:", err);
@@ -79,8 +92,8 @@ export default function LoginPage() {
                 {/* Error / verification needed */}
                 {error && (
                     <div className={`mb-4 rounded-lg px-4 py-3 text-sm text-center ${needsVerification
-                            ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                            : "bg-red-500/10 border border-red-500/20 text-red-400"
+                        ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                        : "bg-red-500/10 border border-red-500/20 text-red-400"
                         }`}>
                         <p>{error}</p>
 

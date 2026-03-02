@@ -89,16 +89,32 @@ export const getWorkspaceMembers = async (workspaceId: string) => {
   return data.members;
 };
 
-export const addMemberToWorkspace = async (
-  workspaceId: string,
-  participantIds: string[]
-) => {
+export const inviteByEmail = async (workspaceId: string, email: string) => {
   const res = await apiClient.post(
-    `/api/workspaces/${workspaceId}/members`,
-    { participantIds }
+    `/api/workspaces/${workspaceId}/invite`,
+    { email }
   );
+  return extractData<{ type: "added" | "invited"; message: string }>(res);
+};
 
-  return extractData(res);
+export const validateInvite = async (token: string) => {
+  const res = await apiClient.get(`/api/workspace-invites/${token}`);
+  return extractData<{
+    valid: boolean;
+    workspaceName: string;
+    expiresAt: string;
+    accepted: boolean;
+    expired: boolean;
+  }>(res);
+};
+
+export const acceptInvite = async (token: string) => {
+  const res = await apiClient.post("/api/workspace-invites/accept", { token });
+  return extractData<{
+    workspaceId: string;
+    workspaceName: string;
+    message: string;
+  }>(res);
 };
 
 export const removeMemberFromWorkspace = async (
