@@ -7,6 +7,10 @@ model User {
   refreshTokenHash String? @map("refresh_token_hash")
   tokenVersion Int @default(0) @map("token_version")
 
+  isEmailVerified         Boolean   @default(false) @map("is_email_verified")
+  emailVerificationToken  String?   @unique @map("email_verification_token")
+  emailVerificationExpiry DateTime? @db.Timestamptz(3) @map("email_verification_expiry")
+
   displayName String?   @db.VarChar(100) @map("display_name")
   phoneNumber String?   @unique @db.VarChar(20) @map("phone_number")
   isOnline    Boolean   @default(false) @map("is_online")
