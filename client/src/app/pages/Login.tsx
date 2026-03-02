@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, RefreshCw } from "lucide-react";
 import AuthLayout from "../layout/AuthLayout";
 import TeamConnectLogo from "../components/TeamConnectLogo";
-import { loginUser } from "../../lib/api";
+import { loginUser, resendVerificationEmail } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { setAuth } = useAuthStore(); // Get Zustand setter
+    const { setAuth } = useAuthStore();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -16,23 +16,53 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // Email verification state
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [resending, setResending] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState("");
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
+        setNeedsVerification(false);
+        setResendSuccess("");
 
         try {
             const response = await loginUser(email, password);
-            
+
             // Update Zustand store with user data
             setAuth(response.user, response.accessToken);
             navigate("/app");
-            
         } catch (err: any) {
             console.error("Login failed:", err);
-            setError(err.message);
+
+            // Check for EMAIL_NOT_VERIFIED from backend (403 with code)
+            const code = err?.response?.data?.code;
+            const message = err?.response?.data?.error || err.message;
+
+            if (code === "EMAIL_NOT_VERIFIED") {
+                setNeedsVerification(true);
+                setError(message);
+            } else {
+                setError(message);
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        setResending(true);
+        setResendSuccess("");
+
+        try {
+            const result = await resendVerificationEmail(email);
+            setResendSuccess(result.message);
+        } catch (err: any) {
+            setError(err.message || "Failed to resend verification email");
+        } finally {
+            setResending(false);
         }
     };
 
@@ -46,9 +76,32 @@ export default function LoginPage() {
                     </h1>
                 </div>
 
+                {/* Error / verification needed */}
                 {error && (
-                    <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm text-red-400 text-center">
-                        {error}
+                    <div className={`mb-4 rounded-lg px-4 py-3 text-sm text-center ${needsVerification
+                            ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                            : "bg-red-500/10 border border-red-500/20 text-red-400"
+                        }`}>
+                        <p>{error}</p>
+
+                        {needsVerification && (
+                            <button
+                                type="button"
+                                onClick={handleResend}
+                                disabled={resending}
+                                className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`} />
+                                {resending ? "Sending…" : "Resend Verification Email"}
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Resend success message */}
+                {resendSuccess && (
+                    <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 text-sm text-emerald-400 text-center">
+                        {resendSuccess}
                     </div>
                 )}
 

@@ -4,9 +4,9 @@ interface User {
   id: string;
   fullName: string;
   email: string;
-  displayName: string | null;
-  isOnline: boolean;
-  lastSeenAt: Date | null;
+  displayName?: string | null;
+  isOnline?: boolean;
+  lastSeenAt?: Date | null;
 }
 
 interface AuthState {

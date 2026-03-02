@@ -3,33 +3,39 @@ import AuthLayout from "../layout/AuthLayout";
 import TeamConnectLogo from "../components/TeamConnectLogo";
 
 import { registerUser } from "../../lib/api";
-import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useNavigate } from 'react-router-dom';
+import { User, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function RegisterPage() {
-
     const navigate = useNavigate();
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-        const [showPassword, setShowPassword] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // Success state — show "check your email" instead of form
+    const [registered, setRegistered] = useState(false);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
-        try {
-           const response = await registerUser(name, email, password);
-           console.log("Registration successful:", response.message);
 
-            navigate("/login");
-            
+        if (password !== confirmPassword) {
+            setError("Passwords do not match");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            await registerUser(name, email, password);
+            setRegistered(true);
         } catch (err: any) {
             console.error("Registration failed:", err);
             setError(err.message);
@@ -38,6 +44,39 @@ export default function RegisterPage() {
         }
     };
 
+    /* ── Success screen ─────────────────────────────────────────────── */
+    if (registered) {
+        return (
+            <AuthLayout>
+                <div className="w-full max-w-md rounded-2xl bg-[#1e293b]/80 backdrop-blur-2xl border border-white/20 shadow-[0_0_60px_rgba(15,23,42,0.9)] px-8 py-10">
+                    <div className="flex flex-col items-center text-center space-y-5">
+                        <CheckCircle className="w-16 h-16 text-emerald-400" />
+                        <h1 className="text-2xl font-semibold text-white">
+                            Check your email
+                        </h1>
+                        <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
+                            We've sent a verification link to{" "}
+                            <span className="text-blue-400 font-medium">{email}</span>.
+                            Click the link to activate your account.
+                        </p>
+                        <div className="w-full pt-4 space-y-3">
+                            <button
+                                onClick={() => navigate("/login")}
+                                className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-medium rounded-xl shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_25px_rgba(37,99,235,0.6)] transition-all duration-300 transform active:scale-[0.98]"
+                            >
+                                Go to Login
+                            </button>
+                            <p className="text-xs text-slate-500">
+                                Didn't receive it? Check your spam folder, or try logging in to resend.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </AuthLayout>
+        );
+    }
+
+    /* ── Registration form ──────────────────────────────────────────── */
     return (
         <AuthLayout>
             <div
@@ -146,7 +185,7 @@ export default function RegisterPage() {
                         </button>
                     </div>
 
-                   {/* Confirm Password */}
+                    {/* Confirm Password */}
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <Lock className="h-5 w-5 text-slate-400" />
@@ -193,7 +232,7 @@ export default function RegisterPage() {
                           disabled:opacity-60 disabled:cursor-not-allowed
                         "
                     >
-                         {loading ? "Creating account…" : "Create Account"}
+                        {loading ? "Creating account…" : "Create Account"}
                     </button>
                 </form>
 

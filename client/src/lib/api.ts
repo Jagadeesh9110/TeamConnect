@@ -37,12 +37,22 @@ export const registerUser = async (
 
 export const loginUser = async (email: string, password: string) => {
   const res = await apiClient.post("/api/auth/login", { email, password });
-  return extractData(res);
+  return extractData<{ accessToken: string; user: { id: string; fullName: string; email: string } }>(res);
 };
 
 export const logoutUser = async () => {
   const res = await apiClient.post("/api/auth/logout");
   return extractData(res);
+};
+
+export const verifyEmail = async (token: string) => {
+  const res = await apiClient.get(`/api/auth/verify-email?token=${token}`);
+  return extractData<{ message: string }>(res);
+};
+
+export const resendVerificationEmail = async (email: string) => {
+  const res = await apiClient.post("/api/auth/resend-verification", { email });
+  return extractData<{ message: string }>(res);
 };
 
 export const getMe = async () => {
