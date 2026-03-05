@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createWorkspace, getUserWorkspaces, getWorkspaceDetails, inviteMemberByEmail, removeMemberFromWorkspace, deleteWorkspace, getWorkspaceMembers } from "../controllers/workspace.controller.js";
+import { getPendingInvites } from "../controllers/workspaceInvite.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -18,6 +19,9 @@ router.get("/:workspaceId/members", authMiddleware, getWorkspaceMembers);
 
 // Invite member by email
 router.post("/:workspaceId/invite", authMiddleware, inviteMemberByEmail);
+
+// Get pending invites for workspace (owner-only)
+router.get("/:workspaceId/invites", authMiddleware, getPendingInvites);
 
 // Remove a member from the workspace
 router.delete("/:workspaceId/members/:userId", authMiddleware, removeMemberFromWorkspace);

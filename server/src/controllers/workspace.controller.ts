@@ -66,6 +66,7 @@ export const createWorkspace = async (req: AuthenticatedRequest, res: Response) 
         })
 
     } catch (err) {
+        console.error("Create Workspace Error:", err);
         res.status(500).json({
             success: false,
             error: "Failed to create workspace"
@@ -353,6 +354,8 @@ export const inviteMemberByEmail = async (req: AuthenticatedRequest, res: Respon
                 text: `${ownerMembership.user.fullName} added you to "${ownerMembership.workspace.name}" on TeamConnect.`,
             }).catch(() => { }); // non-blocking
 
+            console.info(`[WORKSPACE] Member added: ${existingUser.email} → "${ownerMembership.workspace.name}" (${workspaceId})`);
+
             return res.status(200).json({
                 success: true,
                 data: { type: "added", message: `${existingUser.fullName} has been added to the workspace` }
@@ -374,6 +377,22 @@ export const inviteMemberByEmail = async (req: AuthenticatedRequest, res: Respon
             return res.status(400).json({
                 success: false,
                 error: "An invite has already been sent to this email"
+            });
+        }
+
+        // Rate limit: max 10 invites per hour per workspace
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentInviteCount = await prisma.workspaceInvite.count({
+            where: {
+                workspaceId,
+                createdAt: { gte: oneHourAgo },
+            },
+        });
+
+        if (recentInviteCount >= 10) {
+            return res.status(429).json({
+                success: false,
+                error: "Rate limit exceeded. Maximum 10 invites per hour per workspace.",
             });
         }
 
@@ -412,6 +431,8 @@ export const inviteMemberByEmail = async (req: AuthenticatedRequest, res: Respon
             `,
             text: `${ownerMembership.user.fullName} invited you to "${ownerMembership.workspace.name}" on TeamConnect.\n\nAccept: ${inviteUrl}\n\nThis link expires in 7 days.`,
         }).catch(() => { }); // non-blocking
+
+        console.info(`[INVITE] Sent: ${normalizedEmail} → workspace "${ownerMembership.workspace.name}" (${workspaceId}) by user ${currentUserId}`);
 
         return res.status(200).json({
             success: true,
