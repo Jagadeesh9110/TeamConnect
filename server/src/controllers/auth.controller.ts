@@ -104,6 +104,22 @@ export const refreshTokenHandler = async (req: Request, res: Response) => {
   }
 };
 
+// this code is single token one which will be not used further as we are implementing multiple refresh token strategy
+
+// const generateToken = (userId:string,email:string)=>{
+//     return jwt.sign({userId,email},process.env.JWT_SECRET as string,{expiresIn:'1d'});
+// }
+
+// // Helper to set cookie
+// const sendTokenCookie = (res: Response, token: string) => {
+//     res.cookie('token', token, {
+//         httpOnly: true, // Prevent XSS
+//         secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
+//         sameSite: 'strict', // Prevent CSRF
+//         maxAge: 24 * 60 * 60 * 1000 // 1 day
+//     });
+// };
+
 // register a user
 export const registerUser = async (req: Request, res: Response) => {
   try {
@@ -365,8 +381,6 @@ export const loginUser = async (req: Request, res: Response) => {
       where: { id: user.id },
       data: {
         refreshTokenHash: hashToken(refreshToken),
-        isOnline: true,
-        lastSeenAt: new Date(),
       },
     });
 
@@ -396,8 +410,6 @@ export const logoutUser = async (req: AuthenticatedRequest, res: Response) => {
       where: { id: req.user.userId },
       data: {
         refreshTokenHash: null,
-        isOnline: false,
-        lastSeenAt: new Date(),
       },
     });
   }

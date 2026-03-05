@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../config/prisma.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { getIO } from '../socket/socket.server.js';
 
 export const userPublicSelect = {
   id: true,
@@ -68,6 +69,11 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
       where: { id: conversationId },
       data: { updatedAt: new Date() }
     });
+
+    // Broadcast to conversation room
+    try {
+      getIO().to(`conversation:${conversationId}`).emit("message:new", message);
+    } catch { /* socket not ready */ }
 
     return res.status(201).json({
       success: true,
@@ -259,6 +265,11 @@ export const editMessage = async (req: AuthenticatedRequest, res: Response) => {
       data: { updatedAt: new Date() },
     });
 
+    // Broadcast to conversation room
+    try {
+      getIO().to(`conversation:${message.conversationId}`).emit("message:edited", updated);
+    } catch { /* socket not ready */ }
+
     return res.status(200).json({
       success: true,
       data: { message: updated },
@@ -357,6 +368,11 @@ export const softDeleteMessage = async (req: AuthenticatedRequest, res: Response
       where: { id: message.conversationId },
       data: { updatedAt: new Date() },
     });
+
+    // Broadcast to conversation room
+    try {
+      getIO().to(`conversation:${message.conversationId}`).emit("message:deleted", updated);
+    } catch { /* socket not ready */ }
 
     return res.status(200).json({
       success: true,
