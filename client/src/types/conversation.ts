@@ -18,6 +18,7 @@ export interface LastMessage {
 
 export interface Conversation {
   id: string;
+  workspaceId: string;
   type: "PRIVATE" | "GROUP";
   title?: string | null;
   participants: Participant[];

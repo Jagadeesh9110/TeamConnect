@@ -208,6 +208,18 @@ export const updateConversationTitle = async (
   return extractData(res);
 };
 
+// add participant to conversation
+export const addParticipantToConversation = async (
+  conversationId: string,
+  userId: string
+) => {
+  const res = await apiClient.post(
+    `/api/conversations/${conversationId}/participants`,
+    { userId }
+  );
+  return extractData<{ participant: any }>(res);
+};
+
 // messages
 export const sendMessage = async (
   conversationId: string,
