@@ -5,6 +5,7 @@ import {
   createWorkspace,
   logoutUser,
 } from "../../lib/api";
+import { joinWorkspace } from "../../lib/socket";
 import {
   type Conversation,
   deriveWorkstreamStatus,
@@ -96,6 +97,9 @@ export default function WorkstreamList({
 
     // Persist workspace selection
     localStorage.setItem(LS_WORKSPACE, activeWorkspaceId);
+
+    // Join socket room for presence updates
+    joinWorkspace(activeWorkspaceId);
 
     const load = async () => {
       setLoadingConversations(true);

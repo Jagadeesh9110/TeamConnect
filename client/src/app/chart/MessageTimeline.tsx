@@ -10,6 +10,7 @@ interface MessageTimelineProps {
   loading: boolean;
   error: string;
   onMessagesChanged?: (updater: (prev: Message[]) => Message[]) => void;
+  typingUsers?: Map<string, string>;
 }
 
 export default function MessageTimeline({
@@ -18,6 +19,7 @@ export default function MessageTimeline({
   loading,
   error,
   onMessagesChanged,
+  typingUsers,
 }: MessageTimelineProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -55,6 +57,22 @@ export default function MessageTimeline({
           onMessagesChanged={onMessagesChanged}
         />
       ))}
+
+      {/* Typing indicator */}
+      {typingUsers && typingUsers.size > 0 && (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          <span className="text-xs text-slate-400">
+            {typingUsers.size === 1
+              ? "Someone is typing…"
+              : `${typingUsers.size} people are typing…`}
+          </span>
+        </div>
+      )}
 
       <div ref={bottomRef} />
     </main>

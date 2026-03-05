@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { sendMessage } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
 import { type Message } from "../../types/conversation";
+import { emitTypingStart, emitTypingStop } from "../../lib/socket";
 import {
     Bold,
     Italic,
@@ -24,10 +25,37 @@ export default function MessageComposer({
     const [content, setContent] = useState("");
     const [sending, setSending] = useState(false);
 
+    // Typing indicator debounce
+    const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isTyping = useRef(false);
+
+    const handleTyping = useCallback(() => {
+        if (!conversationId) return;
+
+        if (!isTyping.current) {
+            isTyping.current = true;
+            emitTypingStart(conversationId);
+        }
+
+        // Reset the stop timer
+        if (typingTimeout.current) clearTimeout(typingTimeout.current);
+        typingTimeout.current = setTimeout(() => {
+            isTyping.current = false;
+            emitTypingStop(conversationId);
+        }, 2000);
+    }, [conversationId]);
+
     const handleSend = async () => {
         if (!conversationId || !content.trim() || !currentUser) return;
 
         const text = content.trim();
+
+        // Stop typing on send
+        if (isTyping.current && conversationId) {
+            isTyping.current = false;
+            emitTypingStop(conversationId);
+            if (typingTimeout.current) clearTimeout(typingTimeout.current);
+        }
 
         // Optimistic message — append immediately
         const optimisticMsg: Message = {
@@ -45,15 +73,9 @@ export default function MessageComposer({
 
         setSending(true);
         try {
-            const result = await sendMessage(conversationId, text);
-            // Replace optimistic message with server response
-            // For now the optimistic one stays — server returns the real message
-            // but since IDs differ, both would appear. We handle this by just
-            // letting ChatLayout refetch or accepting the duplicate until sockets.
-            // A simple approach: the server message will have a real ID.
+            await sendMessage(conversationId, text);
         } catch (err) {
             console.error("Failed to send message:", err);
-            // TODO: mark optimistic message as failed / remove it
         } finally {
             setSending(false);
         }
@@ -87,7 +109,7 @@ export default function MessageComposer({
                 <textarea
                     rows={2}
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => { setContent(e.target.value); handleTyping(); }}
                     onKeyDown={handleKeyDown}
                     disabled={!conversationId || sending}
                     placeholder={

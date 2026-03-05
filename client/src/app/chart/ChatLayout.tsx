@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import WorkstreamList from "./WorkstreamList";
 import ConversationHeader from "./ConversationHeader";
 import MessageTimeline from "./MessageTimeline";
@@ -6,8 +6,19 @@ import MessageComposer from "./MessageComposer";
 import KnowledgeHub from "./KnowledgeHub";
 import { type Conversation, type Message } from "../../types/conversation";
 import { getMessagesForConversation } from "../../lib/api";
+import { useAuthStore } from "../../store/authStore";
+import {
+  connectSocket,
+  disconnectSocket,
+  getSocket,
+  joinConversation,
+  leaveConversation,
+} from "../../lib/socket";
 
 export default function ChatLayout() {
+  const currentUser = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
 
@@ -22,7 +33,111 @@ export default function ChatLayout() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState("");
 
+  /* ── Typing indicators ───────────────────────────────────────────── */
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
   const conversationId = activeConversation?.id ?? null;
+
+  /* ── 1. Connect socket on mount ──────────────────────────────────── */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    connectSocket();
+
+    return () => {
+      disconnectSocket();
+    };
+  }, [isAuthenticated]);
+
+  /* ── 2. Join/leave conversation rooms + listen for events ────────── */
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !conversationId) return;
+
+    // Join conversation room
+    joinConversation(conversationId);
+
+    // --- Message events ---
+    const handleNewMessage = (msg: Message) => {
+      // Skip own messages (already added optimistically)
+      if (msg.sender?.id === currentUser?.id) return;
+      setMessages((prev) => [...prev, msg]);
+    };
+
+    const handleEditedMessage = (msg: Message) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? msg : m))
+      );
+    };
+
+    const handleDeletedMessage = (msg: Message) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? msg : m))
+      );
+    };
+
+    // --- Typing events ---
+    const handleTypingStart = (data: { userId: string; conversationId: string }) => {
+      if (data.conversationId !== conversationId) return;
+      if (data.userId === currentUser?.id) return;
+
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        next.set(data.userId, data.userId);
+        return next;
+      });
+
+      // Auto-clear after 3 seconds
+      const existing = typingTimers.current.get(data.userId);
+      if (existing) clearTimeout(existing);
+      typingTimers.current.set(
+        data.userId,
+        setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = new Map(prev);
+            next.delete(data.userId);
+            return next;
+          });
+          typingTimers.current.delete(data.userId);
+        }, 3000)
+      );
+    };
+
+    const handleTypingStop = (data: { userId: string; conversationId: string }) => {
+      if (data.conversationId !== conversationId) return;
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        next.delete(data.userId);
+        return next;
+      });
+      const timer = typingTimers.current.get(data.userId);
+      if (timer) {
+        clearTimeout(timer);
+        typingTimers.current.delete(data.userId);
+      }
+    };
+
+    socket.on("message:new", handleNewMessage);
+    socket.on("message:edited", handleEditedMessage);
+    socket.on("message:deleted", handleDeletedMessage);
+    socket.on("typing:start", handleTypingStart);
+    socket.on("typing:stop", handleTypingStop);
+
+    return () => {
+      leaveConversation(conversationId);
+      socket.off("message:new", handleNewMessage);
+      socket.off("message:edited", handleEditedMessage);
+      socket.off("message:deleted", handleDeletedMessage);
+      socket.off("typing:start", handleTypingStart);
+      socket.off("typing:stop", handleTypingStop);
+
+      // Clear typing state for this conversation
+      setTypingUsers(new Map());
+      typingTimers.current.forEach((t) => clearTimeout(t));
+      typingTimers.current.clear();
+    };
+  }, [conversationId, currentUser?.id]);
 
   // Fetch messages when conversation changes
   useEffect(() => {
@@ -89,6 +204,7 @@ export default function ChatLayout() {
             loading={messagesLoading}
             error={messagesError}
             onMessagesChanged={setMessages}
+            typingUsers={typingUsers}
           />
           <MessageComposer
             conversationId={conversationId}
@@ -105,3 +221,4 @@ export default function ChatLayout() {
     </div>
   );
 }
+
