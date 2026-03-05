@@ -3,6 +3,8 @@ import {
     getWorkspaceDetails,
     getWorkspaceMembers,
     inviteByEmail,
+    getPendingInvites,
+    revokeInvite,
     removeMemberFromWorkspace,
     deleteWorkspace,
 } from "../../lib/api";
@@ -15,6 +17,8 @@ import {
     Shield,
     AlertTriangle,
     Loader2,
+    Clock,
+    XCircle,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -353,6 +357,28 @@ function InviteTab({
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    // Pending invites state
+    const [pendingInvites, setPendingInvites] = useState<
+        { id: string; email: string; invitedBy: string; createdAt: string; expiresAt: string }[]
+    >([]);
+    const [loadingInvites, setLoadingInvites] = useState(true);
+    const [revokingId, setRevokingId] = useState<string | null>(null);
+
+    const fetchPendingInvites = async () => {
+        try {
+            const result = await getPendingInvites(workspaceId);
+            setPendingInvites(result.invites);
+        } catch {
+            /* silent */
+        } finally {
+            setLoadingInvites(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPendingInvites();
+    }, [workspaceId]);
+
     const handleInvite = async () => {
         const trimmed = email.trim().toLowerCase();
 
@@ -375,6 +401,7 @@ function InviteTab({
                 setSuccess(`📧 ${result.message}`);
             }
             setEmail("");
+            await fetchPendingInvites();
         } catch (err: any) {
             setError(
                 err?.response?.data?.error || err.message || "Failed to send invite"
@@ -382,6 +409,27 @@ function InviteTab({
         } finally {
             setInviting(false);
         }
+    };
+
+    const handleRevoke = async (inviteId: string) => {
+        setRevokingId(inviteId);
+        try {
+            await revokeInvite(inviteId);
+            setPendingInvites((prev) => prev.filter((inv) => inv.id !== inviteId));
+        } catch (err: any) {
+            setError(err?.response?.data?.error || "Failed to cancel invite");
+        } finally {
+            setRevokingId(null);
+        }
+    };
+
+    const timeAgo = (dateStr: string) => {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return `${Math.floor(hrs / 24)}d ago`;
     };
 
     return (
@@ -415,6 +463,49 @@ function InviteTab({
 
             {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
             {success && <p className="text-xs text-emerald-400 mt-2">{success}</p>}
+
+            {/* Pending invites list */}
+            {loadingInvites ? (
+                <div className="flex items-center justify-center py-4 mt-4">
+                    <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                </div>
+            ) : pendingInvites.length > 0 ? (
+                <div className="mt-5">
+                    <p className="text-xs text-slate-400 mb-2">
+                        Pending invites ({pendingInvites.length})
+                    </p>
+                    <div className="space-y-1">
+                        {pendingInvites.map((inv) => (
+                            <div
+                                key={inv.id}
+                                className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 group"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm text-white truncate">
+                                        {inv.email}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        Sent {timeAgo(inv.createdAt)} by {inv.invitedBy}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleRevoke(inv.id)}
+                                    disabled={revokingId === inv.id}
+                                    title="Cancel invite"
+                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 transition-all p-1 rounded-md hover:bg-white/5 disabled:opacity-50"
+                                >
+                                    {revokingId === inv.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <XCircle className="w-3.5 h-3.5" />
+                                    )}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

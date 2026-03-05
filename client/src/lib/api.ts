@@ -117,6 +117,24 @@ export const acceptInvite = async (token: string) => {
   }>(res);
 };
 
+export const getPendingInvites = async (workspaceId: string) => {
+  const res = await apiClient.get(`/api/workspaces/${workspaceId}/invites`);
+  return extractData<{
+    invites: {
+      id: string;
+      email: string;
+      invitedBy: string;
+      createdAt: string;
+      expiresAt: string;
+    }[];
+  }>(res);
+};
+
+export const revokeInvite = async (inviteId: string) => {
+  const res = await apiClient.delete(`/api/workspace-invites/${inviteId}`);
+  return extractData<{ message: string }>(res);
+};
+
 export const removeMemberFromWorkspace = async (
   workspaceId: string,
   userId: string
