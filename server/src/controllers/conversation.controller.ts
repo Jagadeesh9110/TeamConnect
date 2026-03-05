@@ -568,3 +568,123 @@ export const udpateConversationTitle = async (req: AuthenticatedRequest, res: Re
         });
     }
 }
+
+// Add a participant to a conversation
+export const addParticipantToConversation = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const currentUserId = req.user?.userId;
+        const conversationId = req.params.conversationId as string;
+        const userId = req.body.userId as string | undefined;
+
+        if (!currentUserId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized"
+            });
+        }
+
+        if (!conversationId) {
+            return res.status(400).json({
+                success: false,
+                error: "conversationId is required"
+            });
+        }
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: "userId is required"
+            });
+        }
+
+        // Find conversation with workspace info
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            include: {
+                participants: { select: { userId: true } },
+            },
+        });
+
+        if (!conversation) {
+            return res.status(404).json({
+                success: false,
+                error: "Conversation not found"
+            });
+        }
+
+        // Current user must be a participant
+        const isCurrentParticipant = conversation.participants.some(
+            (p: { userId: string }) => p.userId === currentUserId
+        );
+        if (!isCurrentParticipant) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not a participant in this conversation"
+            });
+        }
+
+        // User being added must be a workspace member
+        const workspaceMembership = await prisma.workspaceMember.findUnique({
+            where: {
+                workspaceId_userId: {
+                    workspaceId: conversation.workspaceId,
+                    userId,
+                },
+            },
+        });
+
+        if (!workspaceMembership) {
+            return res.status(403).json({
+                success: false,
+                error: "User is not a member of this workspace"
+            });
+        }
+
+        // Check not already a participant
+        const alreadyParticipant = conversation.participants.some(
+            (p: { userId: string }) => p.userId === userId
+        );
+        if (alreadyParticipant) {
+            return res.status(400).json({
+                success: false,
+                error: "User is already a participant in this conversation"
+            });
+        }
+
+        // Create participant
+        const participant = await prisma.participant.create({
+            data: {
+                conversationId,
+                userId,
+            },
+            include: {
+                user: {
+                    select: userPublicSelect,
+                },
+            },
+        });
+
+        // Broadcast via socket
+        try {
+            const { getIO } = await import('../socket/socket.server.js');
+            getIO().to(`conversation:${conversationId}`).emit("conversation:participantAdded", {
+                conversationId,
+                participant: participant,
+            });
+        } catch { /* socket not ready */ }
+
+        console.info(`[CONVERSATION] Participant added: userId=${userId} to conversationId=${conversationId} by ${currentUserId}`);
+
+        return res.status(201).json({
+            success: true,
+            data: { participant }
+        });
+
+    } catch (error) {
+        console.error("Add Participant Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to add participant"
+        });
+    }
+}

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPrivateConversation, getUserConversations, createGroupConversation, udpateConversationTitle } from "../controllers/conversation.controller.js";
+import { createPrivateConversation, getUserConversations, createGroupConversation, udpateConversationTitle, addParticipantToConversation } from "../controllers/conversation.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -15,5 +15,8 @@ router.get("/", authMiddleware, getUserConversations);
 
 //patch update conversation title 
 router.patch("/:conversationId/title", authMiddleware, udpateConversationTitle)
+
+// Add participant to conversation
+router.post("/:conversationId/participants", authMiddleware, addParticipantToConversation);
 
 export default router;
