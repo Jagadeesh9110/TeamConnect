@@ -322,3 +322,18 @@ export const deleteDecision = async (decisionId: string) => {
   const res = await apiClient.delete(`/api/decisions/${decisionId}`);
   return extractData<{ message: string }>(res);
 };
+
+// Summaries
+export const summarizeConversation = async (conversationId: string) => {
+  const res = await apiClient.post(
+    `/api/conversations/${conversationId}/summarize`
+  );
+  return extractData<{ summary: any }>(res);
+};
+
+export const getConversationSummary = async (conversationId: string) => {
+  const res = await apiClient.get(
+    `/api/conversations/${conversationId}/summary`
+  );
+  return extractData<{ summary: any | null }>(res);
+};
