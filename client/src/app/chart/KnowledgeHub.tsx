@@ -1,4 +1,4 @@
-/* Knowledge Hub right panel — all content is mock/static */
+/* Knowledge Hub right panel — wired to conversationId */
 
 import { RefreshCw, Maximize2, Minimize2 } from "lucide-react";
 import ActionItems from "./ActionItems";
@@ -13,9 +13,10 @@ const summaryBullets = [
 interface KnowledgeHubProps {
     expanded: boolean;
     onToggle: () => void;
+    conversationId: string | null;
 }
 
-export default function KnowledgeHub({ expanded, onToggle }: KnowledgeHubProps) {
+export default function KnowledgeHub({ expanded, onToggle, conversationId }: KnowledgeHubProps) {
     return (
         <aside
             className="shrink-0 border-l border-white/5 bg-[#0c1527] flex flex-col hidden lg:flex transition-all duration-300 ease-in-out"
@@ -76,10 +77,10 @@ export default function KnowledgeHub({ expanded, onToggle }: KnowledgeHubProps) 
                 </div>
 
                 {/* ─ Action Items ───────────────────────────────────────── */}
-                <ActionItems />
+                <ActionItems conversationId={conversationId} />
 
                 {/* ─ Decision Log ───────────────────────────────────────── */}
-                <DecisionLog />
+                <DecisionLog conversationId={conversationId} />
             </div>
         </aside>
     );

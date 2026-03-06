@@ -37,6 +37,28 @@ export interface Message {
   deletedAt?: string | null;
 }
 
+export type ActionItemStatus = "OPEN" | "IN_PROGRESS" | "DONE";
+
+export interface ActionItem {
+  id: string;
+  description: string;
+  status: ActionItemStatus;
+  conversationId: string;
+  assignedTo?: UserPublic | null;
+  createdBy: UserPublic;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Decision {
+  id: string;
+  title: string;
+  description?: string | null;
+  conversationId: string;
+  createdBy: UserPublic;
+  createdAt: string;
+}
+
 // Display-only status — derived on the client, never persisted
 export type WorkstreamStatus = "DRAFT" | "ACTIVE" | "PENDING" | "RESOLVED";
 

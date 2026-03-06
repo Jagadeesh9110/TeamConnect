@@ -216,6 +216,7 @@ export default function ChatLayout() {
         <KnowledgeHub
           expanded={hubExpanded}
           onToggle={() => setHubExpanded((prev) => !prev)}
+          conversationId={conversationId}
         />
       </div>
     </div>

@@ -262,3 +262,63 @@ export const deleteMessage = async (messageId: string) => {
 
   return extractData<{ message: Message }>(res);
 };
+
+// Action Items
+
+export const createActionItem = async (
+  conversationId: string,
+  description: string,
+  assignedToId?: string
+) => {
+  const res = await apiClient.post(
+    `/api/conversations/${conversationId}/action-items`,
+    { description, assignedToId }
+  );
+  return extractData<{ actionItem: any }>(res);
+};
+
+export const getActionItems = async (conversationId: string) => {
+  const res = await apiClient.get(
+    `/api/conversations/${conversationId}/action-items`
+  );
+  return extractData<{ actionItems: any[] }>(res);
+};
+
+export const updateActionItem = async (
+  actionItemId: string,
+  data: { description?: string; status?: string; assignedToId?: string | null }
+) => {
+  const res = await apiClient.patch(`/api/action-items/${actionItemId}`, data);
+  return extractData<{ actionItem: any }>(res);
+};
+
+export const deleteActionItem = async (actionItemId: string) => {
+  const res = await apiClient.delete(`/api/action-items/${actionItemId}`);
+  return extractData<{ message: string }>(res);
+};
+
+// Decisions
+
+export const createDecision = async (
+  conversationId: string,
+  title: string,
+  description?: string
+) => {
+  const res = await apiClient.post(
+    `/api/conversations/${conversationId}/decisions`,
+    { title, description }
+  );
+  return extractData<{ decision: any }>(res);
+};
+
+export const getDecisions = async (conversationId: string) => {
+  const res = await apiClient.get(
+    `/api/conversations/${conversationId}/decisions`
+  );
+  return extractData<{ decisions: any[] }>(res);
+};
+
+export const deleteDecision = async (decisionId: string) => {
+  const res = await apiClient.delete(`/api/decisions/${decisionId}`);
+  return extractData<{ message: string }>(res);
+};
