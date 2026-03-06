@@ -1,296 +1,277 @@
 # TeamConnect
 
-A secure, multi-workspace team collaboration backend built with TypeScript, Express, PostgreSQL, and Prisma. Designed as a production-grade foundation for real-time team communication with workspace isolation, role-based access control, and a rotating JWT authentication strategy.
+A collaborative conversation platform that transforms team discussions into structured knowledge. Instead of letting important decisions and action items get buried in message threads, TeamConnect extracts and organizes key outcomes from conversations into a dedicated Knowledge Hub.
 
----
+## Project Overview
 
-## Problem Statement
+TeamConnect is built around a simple idea: team conversations produce valuable outcomes — decisions, tasks, and insights — but these outcomes are often lost in long chat histories.
 
-Existing team communication tools fall into two extremes: lightweight social messaging apps that lack structure for professional work, and heavyweight enterprise suites that are complex and expensive for small teams.
+The platform provides:
+- **Workspace-based collaboration** where teams organize around shared workspaces
+- **Real-time conversations** with instant messaging via WebSockets
+- **Knowledge extraction** that captures decisions, action items, and AI-generated summaries directly from discussions
+- **AI-powered summaries** using Google Gemini to distill conversation context into concise, structured summaries
 
-TeamConnect addresses this gap by providing a **backend-first collaboration platform** where:
-
-- Workspaces isolate teams and their data at the query level
-- Membership and permissions are enforced before any resource is accessed
-- Conversations (private and group) are scoped to workspaces
-- Authentication uses short-lived access tokens with secure, rotating refresh tokens
-
-The architecture is designed to support real-time features (WebSockets) and AI-assisted productivity as future layers on top of a solid, secure backend.
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Client (React)                      │
-│         Vite · TypeScript · TailwindCSS · Zustand       │
-└──────────────────────┬──────────────────────────────────┘
-                       │ HTTPS (REST)
-┌──────────────────────▼──────────────────────────────────┐
-│                  API Server (Express 5)                  │
-│                                                         │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
-│  │    Auth      │  │  Workspace   │  │ Conversations │  │
-│  │  Controller  │  │  Controller  │  │  + Messages   │  │
-│  └──────┬──────┘  └──────┬───────┘  └──────┬────────┘  │
-│         │                │                  │           │
-│  ┌──────▼──────────────────────────────────▼────────┐  │
-│  │              Auth Middleware (JWT)                │  │
-│  │         Bearer token verification on all         │  │
-│  │            protected routes                      │  │
-│  └──────────────────────┬───────────────────────────┘  │
-│                         │                               │
-│  ┌──────────────────────▼───────────────────────────┐  │
-│  │            Prisma ORM (Query Layer)              │  │
-│  │       Workspace-scoped queries enforce           │  │
-│  │           multi-tenant isolation                 │  │
-│  └──────────────────────┬───────────────────────────┘  │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-              ┌───────────▼────────────┐
-              │   PostgreSQL (Docker)  │
-              │   6 tables · enums ·   │
-              │   composite keys       │
-              └────────────────────────┘
-```
-
----
-
-## Security Model
+## Key Features
 
 ### Authentication
+- User registration and login with JWT-based authentication
+- Access token and refresh token mechanism
+- Email verification flow
+- Secure password hashing with bcrypt
 
-| Mechanism | Detail |
-|-----------|--------|
-| **Access Token** | Short-lived JWT (Bearer), contains `userId`, `email`, `tokenVersion` |
-| **Refresh Token** | Longer-lived JWT stored as HTTP-only secure cookie, scoped to `/api/auth/refresh` |
-| **Token Rotation** | Every refresh issues a new refresh token and invalidates the previous one |
-| **Token Hashing** | Refresh tokens are SHA-256 hashed before database storage |
-| **Token Versioning** | `tokenVersion` on User model enables server-side session invalidation |
-| **Cookie Security** | `httpOnly`, `secure` (production), `sameSite: lax` |
+### Workspaces
+- Create and manage workspaces
+- Invite members by email
+- Role-based workspace ownership
+- Pending invite management with revocation
+- Rate-limited invite endpoint
 
-### Authorization
+### Conversations
+- Private (1:1) and group conversations
+- Add workspace members to conversations
+- Real-time messaging with Socket.IO
+- Message editing and soft-delete
+- Typing indicators and presence tracking
 
-- **Workspace isolation**: Every data query is scoped to a workspace. Users must be verified members before accessing any workspace resource.
-- **Role-based access**: `OWNER` and `MEMBER` roles on `WorkspaceMember`. Only owners can add/remove members or delete workspaces.
-- **Conversation access**: Users can only access conversations they are participants in.
+### Knowledge Hub
+Each conversation includes a Knowledge Hub panel that organizes structured information from discussions:
 
----
+**Action Items**
+- Create tasks directly from conversations
+- Assign to conversation participants
+- Track status: `OPEN` → `IN_PROGRESS` → `DONE`
+- Real-time updates across participants
+
+**Decision Log**
+- Record decisions made during discussions
+- Track author and timestamp
+- Maintain a searchable decision history
+
+**AI Conversation Summaries**
+- Generate summaries from the last 50 messages using Gemini AI
+- Structured prompt extracts decisions, constraints, and key ideas
+- 5-minute cooldown prevents unnecessary API calls
+- Summaries stored in the database and broadcast in real time
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Backend | Node.js, Express, TypeScript |
+| Database | PostgreSQL, Prisma ORM |
+| Real-Time | Socket.IO |
+| Authentication | JWT (access + refresh tokens), bcrypt |
+| AI | Google Gemini API (gemini-1.5-flash) |
+| Frontend | React, TypeScript, Vite, TailwindCSS |
+
+## System Architecture
+
+```
+Workspace
+  │
+  ├── Members
+  │
+  └── Conversations
+        │
+        ├── Participants
+        │
+        ├── Messages
+        │
+        ├── Action Items
+        │
+        ├── Decisions
+        │
+        └── Summaries (AI-generated)
+```
+
+The architecture follows a layered approach with clear separation of concerns:
+
+```
+Client (React)
+  │
+  ├── API Layer (axios abstraction)
+  ├── Socket Layer (Socket.IO client)
+  └── State Management (Zustand)
+
+Server (Express)
+  │
+  ├── Routes
+  ├── Middleware (auth, error handling)
+  ├── Controllers
+  ├── Services (Gemini AI)
+  └── Database (Prisma ORM → PostgreSQL)
+```
 
 ## Database Design
 
-PostgreSQL with Prisma ORM. Schema uses a multi-file layout (`prismaSchemaFolder`).
-
 ```
-┌──────────┐       ┌─────────────────┐       ┌──────────────┐
-│   User   │───┐   │ WorkspaceMember  │   ┌──│  Workspace   │
-│          │   └──▶│  (composite PK)  │◀──┘  │              │
-│ id       │       │ workspaceId      │      │ id           │
-│ email    │       │ userId           │      │ name         │
-│ password │       │ role (OWNER|     │      │ createdById  │
-│ isOnline │       │       MEMBER)    │      └──────┬───────┘
-│ tokenVer │       └─────────────────┘              │
-└────┬─────┘                                        │
-     │           ┌──────────────┐                   │
-     │      ┌───▶│ Conversation │◀──────────────────┘
-     │      │    │              │
-     │      │    │ id           │
-     │      │    │ type (PRIVATE│
-     │      │    │      |GROUP) │
-     │      │    │ workspaceId  │
-     │      │    └──────┬───────┘
-     │      │           │
-     │  ┌───┴────┐  ┌───▼─────┐
-     └─▶│Participant│ │ Message │
-        │          │  │         │
-        │ convId   │  │ content │
-        │ userId   │  │ status  │
-        └──────────┘  │ senderId│
-                      └─────────┘
+User
+ ├── WorkspaceMember → Workspace
+ ├── Participant → Conversation
+ ├── Message
+ ├── ActionItem (created / assigned)
+ └── Decision (created)
+
+Workspace
+ ├── WorkspaceMember
+ ├── WorkspaceInvite
+ └── Conversation
+      ├── Participant
+      ├── Message
+      ├── ActionItem
+      ├── Decision
+      └── ConversationSummary
 ```
 
-**Key design decisions:**
-- `WorkspaceMember` uses a composite primary key `(workspaceId, userId)` — enforces uniqueness at the database level
-- `Conversation` is always scoped to a workspace via `workspaceId` foreign key with `onDelete: Cascade`
-- `Message.status` enum (`SENT | DELIVERED | READ`) is schema-ready for read receipts
-- All timestamps use `Timestamptz(3)` for timezone-aware precision
-- Online presence fields (`isOnline`, `lastSeenAt`) updated on login/logout
+Key design decisions:
+- Cascade deletes on conversation-scoped entities
+- Action items scoped to conversation participants (not workspace-wide)
+- Summaries track `messageCount` to indicate staleness
+- Soft-delete for messages to preserve conversation integrity
 
----
+## API Overview
 
-## API Reference
+### Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/refresh-token` | Refresh access token |
+| POST | `/api/auth/logout` | Logout |
+| GET | `/api/auth/verify-email/:token` | Verify email |
 
-All protected routes require `Authorization: Bearer <accessToken>`.
+### Workspaces
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/workspaces` | Create workspace |
+| GET | `/api/workspaces` | List user workspaces |
+| GET | `/api/workspaces/:id/members` | List workspace members |
+| POST | `/api/workspace-invites/send` | Send email invite |
+| DELETE | `/api/workspace-invites/:id` | Revoke invite |
 
-### Auth (`/api/auth`)
+### Conversations
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/conversations/private` | Create private conversation |
+| POST | `/api/conversations/group` | Create group conversation |
+| GET | `/api/conversations` | List user conversations |
+| POST | `/api/conversations/:id/participants` | Add member |
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/register` | — | Create a new user account |
-| POST | `/login` | — | Authenticate and receive tokens |
-| POST | `/refresh` | Cookie | Rotate refresh token, get new access token |
-| POST | `/logout` | Bearer | Invalidate refresh token, set user offline |
-| GET | `/me` | Bearer | Get current user profile |
+### Messages
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/messages` | Send message |
+| GET | `/api/messages/:conversationId` | Get messages |
+| PATCH | `/api/messages/:id` | Edit message |
+| DELETE | `/api/messages/:id` | Soft-delete message |
 
-### Workspaces (`/api/workspaces`)
+### Action Items
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/conversations/:id/action-items` | Create action item |
+| GET | `/api/conversations/:id/action-items` | List action items |
+| PATCH | `/api/action-items/:id` | Update status/description |
+| DELETE | `/api/action-items/:id` | Delete action item |
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/` | Bearer | Create a workspace (creator becomes OWNER) |
-| GET | `/` | Bearer | List all workspaces for the current user |
-| GET | `/:workspaceId` | Bearer | Get workspace details with members |
-| POST | `/:workspaceId/members` | Bearer | Add members (OWNER only) |
-| DELETE | `/:workspaceId/members/:userId` | Bearer | Remove a member (OWNER only) |
-| DELETE | `/:workspaceId` | Bearer | Delete workspace (OWNER only) |
+### Decisions
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/conversations/:id/decisions` | Record decision |
+| GET | `/api/conversations/:id/decisions` | List decisions |
+| DELETE | `/api/decisions/:id` | Delete decision |
 
-### Conversations (`/api/conversations`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/private` | Bearer | Create or retrieve a private conversation |
-| GET | `/?workspaceId=` | Bearer | List conversations in a workspace |
-
-### Messages (`/api/messages`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/` | Bearer | Send a message to a conversation |
-| GET | `/:conversationId/messages` | Bearer | Get all messages in a conversation |
-
-### Response Format
-
-All endpoints return a consistent envelope:
-
-```json
-// Success
-{ "success": true, "data": { ... } }
-
-// Error
-{ "success": false, "error": "Human-readable error message" }
-```
-
----
-
-## Tech Stack
-
-### Backend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| Node.js | 20+ | Runtime |
-| Express | 5.x | HTTP framework |
-| TypeScript | 5.9 | Type safety |
-| Prisma | 7.x | ORM and migrations |
-| PostgreSQL | 15+ | Primary database |
-| JWT | — | Authentication tokens |
-| bcryptjs | — | Password hashing |
-| Docker Compose | — | Database container |
-
-### Frontend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| React | 19 | UI framework |
-| Vite | 7.x | Build tool and dev server |
-| TypeScript | 5.9 | Type safety |
-| TailwindCSS | 3.x | Styling |
-| Zustand | 5.x | State management |
-| Axios | — | HTTP client |
-| React Router | 7.x | Client-side routing |
-
----
-
-## Getting Started
-
-### Prerequisites
-- Node.js 20+
-- Docker (for PostgreSQL)
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/Jagadeesh9110/TeamConnect.git
-cd TeamConnect
-
-# Start PostgreSQL
-cd server
-docker compose up -d
-
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your database URL and JWT secrets
-
-# Run database migrations
-npx prisma migrate dev
-
-# Start the development server
-npm run dev
-```
-
-```bash
-# In a separate terminal — start the client
-cd client
-npm install
-npm run dev
-```
-
----
+### AI Summary
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/conversations/:id/summarize` | Generate AI summary |
+| GET | `/api/conversations/:id/summary` | Get latest summary |
 
 ## Project Structure
 
 ```
 TeamConnect/
-├── client/                         # React frontend
-│   └── src/
-│       ├── app/                    # Pages, components, layouts
-│       ├── hooks/                  # Custom React hooks
-│       ├── lib/                    # API client, utilities
-│       ├── store/                  # Zustand state management
-│       └── types/                  # TypeScript type definitions
-│
-├── server/                         # Express backend
+├── server/
 │   ├── prisma/
-│   │   └── schema/                 # Multi-file Prisma schema
-│   │       ├── User.prisma
-│   │       ├── Workspace.prisma
-│   │       ├── WorkspaceMember.prisma
-│   │       ├── Conversation.prisma
-│   │       ├── Participant.prisma
-│   │       └── Message.prisma
+│   │   └── schema/              # Prisma schema files (multi-file)
 │   └── src/
-│       ├── controllers/            # Request handlers
-│       ├── middleware/             # JWT auth middleware
-│       ├── routes/                 # Route definitions
-│       ├── utils/                  # Token generation helpers
-│       ├── config/                 # Prisma client setup
-│       ├── app.ts                  # Express app configuration
-│       └── server.ts               # Server entry point
+│       ├── config/              # Database and environment config
+│       ├── controllers/         # Request handlers
+│       ├── middleware/          # Auth and error middleware
+│       ├── routes/             # Express route definitions
+│       ├── services/           # Business logic (Gemini AI)
+│       ├── socket/             # Socket.IO server and event handlers
+│       ├── utils/              # Email utilities
+│       ├── app.ts              # Express app setup
+│       └── server.ts           # Server entry point
 │
-└── README.md
+└── client/
+    └── src/
+        ├── app/
+        │   ├── chart/          # Chat UI components (Knowledge Hub, Messages)
+        │   ├── components/     # Shared components
+        │   ├── layout/         # Layout wrappers
+        │   └── pages/          # Route pages
+        ├── hooks/              # Custom React hooks
+        ├── lib/                # API client, socket client
+        ├── store/              # Zustand state management
+        └── types/              # TypeScript type definitions
 ```
 
----
+## Running the Project
 
-## Roadmap
+### Prerequisites
+- Node.js (v18+)
+- PostgreSQL
+- Google Gemini API key
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| ✅ | Multi-workspace backend with RBAC | Complete |
-| ✅ | JWT auth with rotating refresh tokens | Complete |
-| ✅ | Private and group conversations | Complete |
-| ✅ | Message persistence and retrieval | Complete |
-| ✅ | Online/offline presence tracking | Complete |
-| ✅ | Standardized API response format | Complete |
-| 🔲 | WebSocket real-time messaging | Planned |
-| 🔲 | Typing indicators and read receipts | Planned |
-| 🔲 | AI conversation summarization | Planned |
-| 🔲 | AI action item extraction | Planned |
+### Backend Setup
 
----
+```bash
+cd server
+npm install
+```
 
-## License
+Create a `.env` file:
 
-This project is licensed under the MIT License.
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/teamconnect_db
+JWT_SECRET=your_jwt_secret
+REFRESH_TOKEN_SECRET=your_refresh_secret
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+GEMINI_API_KEY=your_gemini_api_key
+CLIENT_URL=http://localhost:5173
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your_email
+SMTP_PASS=your_app_password
+```
+
+Run migrations and start the server:
+
+```bash
+npx prisma migrate dev
+npm run dev
+```
+
+### Frontend Setup
+
+```bash
+cd client
+npm install
+```
+
+Create a `.env` file:
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The frontend runs on `http://localhost:5173` and the backend on `http://localhost:5000`.
