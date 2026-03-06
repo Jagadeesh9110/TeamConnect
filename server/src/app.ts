@@ -8,6 +8,7 @@ import workspaceRoutes from "./routes/workspace.routes.js";
 import workspaceInviteRoutes from "./routes/workspaceInvite.routes.js";
 import actionItemRoutes from "./routes/actionItem.routes.js";
 import decisionRoutes from "./routes/decision.routes.js";
+import summaryRoutes from "./routes/summary.routes.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/workspace-invites", workspaceInviteRoutes);
 app.use("/api", actionItemRoutes);
 app.use("/api", decisionRoutes);
+app.use("/api", summaryRoutes);
 
 app.get("/health", (_, res) => {
     res.status(200).json({ status: "OK", service: "TeamConnect Backend" });

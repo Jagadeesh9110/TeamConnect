@@ -25,6 +25,7 @@ model Conversation {
   messages       Message[]
   actionItems    ActionItem[]
   decisions      Decision[]
+  summaries      ConversationSummary[]
 
   @@map("conversations")
 }

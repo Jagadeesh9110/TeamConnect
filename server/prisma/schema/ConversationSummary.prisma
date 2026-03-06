@@ -1,0 +1,13 @@
+model ConversationSummary {
+    id              String       @id @default(cuid()) @map("summary_id")
+    summary         String       @db.Text
+    messageCount    Int          @map("message_count")
+
+    conversationId  String       @map("conversation_id")
+    conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+    createdAt       DateTime     @default(now()) @db.Timestamptz(3) @map("created_at")
+
+    @@index([conversationId])
+    @@map("conversation_summaries")
+}
