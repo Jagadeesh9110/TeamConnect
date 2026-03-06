@@ -1,0 +1,16 @@
+model Decision {
+    id              String       @id @default(cuid()) @map("decision_id")
+    title           String       @db.VarChar(255)
+    description     String?      @db.VarChar(1000)
+
+    conversationId  String       @map("conversation_id")
+    conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+    createdById     String       @map("created_by_id")
+    createdBy       User         @relation("CreatedDecisions", fields: [createdById], references: [id])
+
+    createdAt       DateTime     @default(now()) @db.Timestamptz(3) @map("created_at")
+
+    @@index([conversationId])
+    @@map("decisions")
+}

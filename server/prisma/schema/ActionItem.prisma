@@ -1,0 +1,28 @@
+enum ActionItemStatus {
+    OPEN
+    IN_PROGRESS
+    DONE
+
+    @@map("action_item_status")
+}
+
+model ActionItem {
+    id              String           @id @default(cuid()) @map("action_item_id")
+    description     String           @db.VarChar(500)
+    status          ActionItemStatus @default(OPEN)
+
+    conversationId  String           @map("conversation_id")
+    conversation    Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+    assignedToId    String?          @map("assigned_to_id")
+    assignedTo      User?            @relation("AssignedActionItems", fields: [assignedToId], references: [id])
+
+    createdById     String           @map("created_by_id")
+    createdBy       User             @relation("CreatedActionItems", fields: [createdById], references: [id])
+
+    createdAt       DateTime         @default(now()) @db.Timestamptz(3) @map("created_at")
+    updatedAt       DateTime         @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+    @@index([conversationId])
+    @@map("action_items")
+}

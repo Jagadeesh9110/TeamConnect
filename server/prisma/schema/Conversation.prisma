@@ -22,7 +22,9 @@ model Conversation {
   
   // Relationships: Participants & Messages
   participants   Participant[] 
-  messages       Message[]     
+  messages       Message[]
+  actionItems    ActionItem[]
+  decisions      Decision[]
 
   @@map("conversations")
 }
