@@ -374,13 +374,22 @@ function RenderContent({ content }: { content: string }) {
             </pre>
           );
         }
-        const lines = part.split("\n");
-        return lines.map((line, j) => (
-          <span key={`${i}-${j}`}>
-            {line}
-            {j < lines.length - 1 && <br />}
-          </span>
-        ));
+
+        // Escape HTML to prevent XSS
+        const escaped = part
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        // Parse markdown rules
+        const html = escaped
+          .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em class="italic text-slate-200">$1</em>')
+          .replace(/_(.*?)_/g, '<em class="italic text-slate-200">$1</em>')
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">$1</a>')
+          .replace(/\n/g, "<br />");
+
+        return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
       })}
     </>
   );

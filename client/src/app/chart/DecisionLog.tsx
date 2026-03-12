@@ -179,9 +179,16 @@ export default function DecisionLog({ conversationId }: DecisionLogProps) {
                             </h4>
 
                             {d.description && (
-                                <p className="text-xs text-slate-400 leading-relaxed mb-2">
-                                    {d.description}
-                                </p>
+                                <p className="text-xs text-slate-400 leading-relaxed mb-2"
+                                    dangerouslySetInnerHTML={{
+                                        __html: d.description
+                                            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                                            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-300 font-medium">$1</strong>')
+                                            .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                                            .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
+                                            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">$1</a>')
+                                    }}
+                                />
                             )}
 
                             <div className="flex items-center justify-between text-[10px] text-slate-500">

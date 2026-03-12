@@ -30,13 +30,12 @@ interface ConversationHeaderProps {
 function getDisplayTitle(conv: Conversation, currentUserId: string): string {
     if (conv.title) return conv.title;
 
-    if (conv.type === "PRIVATE") {
-        const other = conv.participants.find((p) => p.user.id !== currentUserId);
-        return other?.user.fullName ?? "Unknown User";
-    }
-
-    // GROUP without a title
-    return "Group Discussion";
+    const others = conv.participants.filter((p) => p.user.id !== currentUserId);
+    if (others.length === 0) return "Just You";
+    
+    // Join the names of all other participants
+    const names = others.map(p => p.user.fullName).join(", ");
+    return names;
 }
 
 export default function ConversationHeader({
@@ -308,11 +307,11 @@ function AddMembersModal({
                     conversation.participants.map((p) => p.user.id)
                 );
                 const available = members
-                    .filter((m: any) => !participantIds.has(m.user.id))
+                    .filter((m: any) => !participantIds.has(m.id))
                     .map((m: any) => ({
-                        id: m.user.id,
-                        fullName: m.user.fullName || m.user.displayName || m.user.email,
-                        email: m.user.email,
+                        id: m.id,
+                        fullName: m.name || m.email,
+                        email: m.email,
                     }));
                 setAvailableMembers(available);
             } catch {

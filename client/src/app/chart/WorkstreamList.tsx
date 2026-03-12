@@ -309,12 +309,12 @@ export default function WorkstreamList({
           const isActive = conv.id === activeConversation?.id;
           const status = deriveWorkstreamStatus(conv);
 
-          const name =
-            conv.title
-              ? conv.title
-              : conv.type === "GROUP"
-                ? "Group Discussion"
-                : conv.participants.find((p) => p.user.id !== user?.id)?.user.fullName ?? "Unknown User";
+          const others = conv.participants.filter((p) => p.user.id !== user?.id);
+          const name = conv.title
+            ? conv.title
+            : others.length > 0 
+              ? others.map((p) => p.user.fullName).join(", ")
+              : "Just You";
 
           return (
             <button

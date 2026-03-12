@@ -151,11 +151,12 @@ export default function KnowledgeHub({ expanded, onToggle, conversationId }: Kno
                                     className="text-xs text-slate-400 leading-relaxed pl-3"
                                     dangerouslySetInnerHTML={{
                                         __html: line
+                                            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // Escape HTML
                                             .replace(/^\s*[-•*]\s*/, "")
-                                            .replace(
-                                                /\*\*(.*?)\*\*/g,
-                                                '<span class="text-slate-200 font-medium">$1</span>'
-                                            ),
+                                            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-200 font-medium">$1</strong>')
+                                            .replace(/\*(.*?)\*/g, '<em class="italic text-slate-300">$1</em>')
+                                            .replace(/_(.*?)_/g, '<em class="italic text-slate-300">$1</em>')
+                                            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">$1</a>'),
                                     }}
                                 />
                             ))}
