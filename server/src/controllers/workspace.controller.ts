@@ -232,6 +232,7 @@ export const getWorkspaceMembers = async (req: AuthenticatedRequest, res: Respon
         })
 
     } catch (err) {
+        console.error("Get Workspace Members Error:", err);
         res.status(500).json({
             success: false,
             error: "Failed to retrieve workspace members"
