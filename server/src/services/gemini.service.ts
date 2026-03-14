@@ -5,12 +5,26 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 export const generateConversationSummary = async (messages: string[]) => {
     try {
         console.log("--- Gemini Summary Start ---");
-        console.log("Model: gemini-1.5-flash");
+        console.log("Model: gemini-2.0-flash-lite");
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("Using key:", process.env.GEMINI_API_KEY?.slice(0, 12));
+
+        // Change this line — gemini-1.5-flash is retired
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+
         const conversationText = messages.map((m, i) => `Message ${i + 1}: ${m}`).join("\n");
 
-        const prompt = `Summarize this conversation:\n${conversationText}`;
+        const prompt = `You are an AI assistant that summarizes team discussions.
+
+Summarize this conversation into 3-5 concise bullet points. Focus on:
+- Key decisions made
+- Important action items or tasks
+- Main conclusions or outcomes
+
+Do NOT include greetings or small talk.
+
+Conversation:
+${conversationText}`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
@@ -22,46 +36,6 @@ export const generateConversationSummary = async (messages: string[]) => {
         console.error("--- Gemini API Error Details ---");
         console.error("Status:", error.status);
         console.error("Message:", error.message);
-        console.error("Full Error:", JSON.stringify(error, null, 2));
         throw error;
     }
 };
-
-
-
-
-
-
-
-
-
-// export const generateConversationSummary = async (messages: string[]) => {
-//     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-//     const conversationText = messages.map((m, i) => `Message ${i + 1}: ${m}`).join("\n");
-
-//     const prompt = `
-// You are an AI assistant that summarizes team discussions.
-
-// Your job is to extract the key points from a technical conversation.
-
-// Focus on:
-// - important decisions
-// - key ideas
-// - constraints
-// - conclusions
-
-// Do NOT include greetings or small talk.
-
-// Conversation:
-// ${conversationText}
-
-// Provide a concise summary (3-5 bullet points).
-// `;
-
-//     const result = await model.generateContent(prompt);
-//     const response = result.response;
-//     const summary = response.text();
-
-//     return summary;
-// };
